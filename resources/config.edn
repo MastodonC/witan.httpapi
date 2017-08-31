@@ -1,0 +1,6 @@
+{:service-name "witan.httpapi"
+ :webserver {:port 8015}
+ :log {:level #profile {:default :debug
+                        :staging :info
+                        :prod  :warn}
+       :options {:stacktrace-fonts {}}}}
