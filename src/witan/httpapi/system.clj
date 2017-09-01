@@ -41,4 +41,8 @@
     (reset! sys (component/start (new-system profile)))
     (with-handler :term
       (timbre/info "SIGTERM was caught: shutting down...")
-      (component/stop @sys))))
+      (component/stop @sys)
+      (reset! sys nil))
+
+    (while @sys
+      (Thread/sleep 500))))
