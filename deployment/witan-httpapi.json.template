@@ -10,7 +10,7 @@
                 {"key": "env", "value": "SECRETS_BUCKET=@@SECRETS_BUCKET@@"},
                 {"key": "env", "value": "AWS_REGION=@@AWS_REGION@@"},
                 {"key": "label", "value": "cluster=@@ENVIRONMENT@@"},
-                {"key": "label", "value": "application=witan-httpapi"}
+                {"key": "label", "value": "application=witan.httpapi"}
             ],
             "network": "BRIDGE",
             "portMappings": [
@@ -22,7 +22,7 @@
             ]
         }
     },
-    "id": "witan-httpapi",
+    "id": "witan.httpapi",
     "constraints": [["hostname", "UNIQUE"]],
     "instances": @@INSTANCE_COUNT@@,
     "cpus": @@CPUS@@,

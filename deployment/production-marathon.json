@@ -10,7 +10,7 @@
          {"key": "env", "value": "SECRETS_BUCKET=prod-witan-kixi-heimdall-vault"},
          {"key": "env", "value": "AWS_REGION=eu-west-1"},
          {"key": "label", "value": "cluster=prod"},
-         {"key": "label", "value": "application=witan-httpapi"}
+          {"key": "label", "value": "application=witan.httpapi"}
       ],
       "network": "BRIDGE",
       "portMappings": [
@@ -22,19 +22,19 @@
       ]
     }
   },
-  "id": "witan-httpapi",
-  "constraints": [["hostname", "UNIQUE"]],
-  "instances": 1,
-  "cpus": 0.2,
-  "mem": 512,
-  "healthChecks": [{
-     "path": "/healthcheck",
-     "portIndex": 0,
-     "protocol": "HTTP",
-     "gracePeriodSeconds": 300,
-     "intervalSeconds": 60,
-     "timeoutSeconds": 20,
-     "maxConsecutiveFailures": 3,
-     "ignoreHttp1xx": false
-  }]
+    "id": "witan.httpapi",
+    "constraints": [["hostname", "UNIQUE"]],
+    "instances": 1,
+    "cpus": 0.2,
+    "mem": 512,
+    "healthChecks": [{
+        "path": "/healthcheck",
+        "portIndex": 0,
+        "protocol": "HTTP",
+        "gracePeriodSeconds": 300,
+        "intervalSeconds": 60,
+        "timeoutSeconds": 20,
+        "maxConsecutiveFailures": 3,
+        "ignoreHttp1xx": false
+    }]
 }

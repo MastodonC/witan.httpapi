@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 SERVER_ADDR=${NGINX_SERVER_ADDR:-localhost}
-SERVER_PORT=${NGINX_SERVER_PORT:-30015}
+SERVER_PORT=${NGINX_SERVER_PORT:-8015}
 
 PROXY_CONFIG_FILE=/etc/nginx/sites-available/witan-httpapi
 
