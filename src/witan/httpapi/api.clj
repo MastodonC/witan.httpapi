@@ -40,7 +40,13 @@
 #_(s/def ::id (st/create-spec {:spec uuid
                                :form `uuid
                                :json-schema/type "string"}))
-(def routes
+
+(def healthcheck-routes
+  (context "/" []
+    (GET "/healthcheck" []
+      (str "hello"))))
+
+(def api-routes
   (context "/api" []
     :tags ["api"]
     :coercion :spec
@@ -86,4 +92,5 @@
      :options {:ui {:jsonEditor true}}
      :data {:info {:title "Witan API (Datastore) "}
             :tags [{:name "api", :description "API routes for Witan"}]}}}
-   routes))
+   healthcheck-routes
+   api-routes))
