@@ -37,6 +37,6 @@ ENV AWS_REGION=$AWS_REGION
 ADD scripts/download-secrets.sh /root/download-secrets.sh
 
 EXPOSE 8015
-EXPOSE 80
+EXPOSE 81
 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

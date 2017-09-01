@@ -10,7 +10,7 @@ echo "SERVER_ADDR is ${SERVER_ADDR}:${SERVER_PORT}"
 cat > ${PROXY_CONFIG_FILE} <<EOF
 server {
 
-        listen 80 default_server;
+        listen 81 default_server;
 
         client_max_body_size 1000M;
 
