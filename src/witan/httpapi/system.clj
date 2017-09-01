@@ -1,4 +1,5 @@
 (ns witan.httpapi.system
+  (:gen-class)
   (:require [com.stuartsierra.component :as component]
             [aero.core :refer [read-config]]
             [kixi.log :as kixi-log]
