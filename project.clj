@@ -26,4 +26,4 @@
                    :repl-options {:init-ns user}}
              :uberjar {:aot  :all
                        :main witan.httpapi.system
-                       :uberjar-tname "witan.httpapi-standalone.jar"}})
+                       :uberjar-name "witan.httpapi-standalone.jar"}})
