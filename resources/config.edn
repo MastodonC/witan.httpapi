@@ -1,6 +1,20 @@
 {:service-name "witan.httpapi"
+ ;;:local-args #include "local.edn"
  :webserver {:port 8015}
  :log {:level #profile {:default :debug
                         :staging :info
                         :prod  :warn}
-       :options {:stacktrace-fonts {}}}}
+       :options {:stacktrace-fonts {}}}
+ :auth {:pubkey #profile {:default #or [#env SUPER_SECRET_PUBLIC_PEM_FILE
+                                        ^:ref [:local-args :auth-pubkey]
+                                        "./test-resources/heimdall-dev_pubkey.pem"]
+                          :staging "/root/prod_pubkey.pem"
+                          :prod "/root/prod_pubkey.pem"}}
+ :directory {:heimdall #profile {:default {:host "kixi.heimdall.marathon.mesos"
+                                           :port 10010}
+                                 :development {:host #or [#env HEIMDALL_HOST "localhost"]
+                                               :port #or [#env HEIMDALL_PORT 3002]}}
+             :datastore #profile {:default {:host "kixi.datastore.marathon.mesos"
+                                            :port 18080}
+                                  :development {:host #or [#env DATASTORE_HOST "localhost"]
+                                                :port #or [#env DATASTORE_PORT 8080]}}}}

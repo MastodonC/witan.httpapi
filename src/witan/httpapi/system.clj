@@ -8,7 +8,9 @@
             [signal.handler :refer [with-handler]]
             ;;
             [witan.httpapi.api :as api]
-            [witan.httpapi.components.webserver :as webserver]))
+            [witan.httpapi.components.auth :as auth]
+            [witan.httpapi.components.webserver :as webserver]
+            [witan.httpapi.components.requests :as requests]))
 
 (defn new-system [profile]
   (timbre/debug "Profile" profile)
@@ -26,7 +28,13 @@
     #_(comms/set-verbose-logging! (:verbose-logging? config))
 
     (component/system-map
-     :webserver (webserver/->WebServer api/handler (:webserver config)))))
+     :requester (requests/->HttpRequester (:directory config))
+     :auth (component/using
+            (auth/map->PubKeyAuthenticator (:auth config))
+            [:requester])
+     :webserver (component/using
+                 (webserver/->WebServer api/handler (:webserver config))
+                 [:auth]))))
 
 (defn -main [& [arg]]
   (let [profile (or (keyword arg) :staging)
