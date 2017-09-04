@@ -36,12 +36,17 @@
 (s/def ::total spec/int?)
 (s/def ::total-map (s/keys :req-un [::total]))
 (s/def ::result (s/keys))
-
 (s/def ::xs (s/coll-of spec/int?))
-
 (s/def ::id (api-spec uuid "string"))
-(s/def ::password string?)
-(s/def ::username (api-spec email? "string"))
 
-(s/def ::auth-token (s/keys))
+(s/def ::error spec/string?)
+
+;; Auth
+(s/def ::password spec/string?)
+(s/def ::username (api-spec email? "string"))
+(s/def ::auth-token spec/string?)
+(s/def ::refresh-token spec/string?)
+(s/def ::token-pair (s/keys :req-un [::auth-token ::refresh-token]))
+(s/def ::token-pair-container (s/keys :req-un [::token-pair]))
+
 (s/def ::file (s/keys :req-un [::id ::x ::username]))

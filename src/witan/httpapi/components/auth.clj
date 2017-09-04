@@ -10,7 +10,8 @@
 
 (defprotocol Authenticate
   (authenticate [this time auth-token])
-  (login [this username password]))
+  (login [this username password])
+  (refresh [this token-pair]))
 
 (defrecord PubKeyAuthenticator [pubkey]
   Authenticate
@@ -34,7 +35,15 @@
                     :heimdall
                     "/create-auth-token"
                     {:form-params {:username username
-                                   :password password}}))
+                                   :password password}
+                     :throw-exceptions false}))
+
+  (refresh [this token-pair]
+    (requester/POST (:requester this)
+                    :heimdall
+                    "/refresh-auth-token"
+                    {:form-params (select-keys token-pair [:refresh-token])
+                     :throw-exceptions false}))
 
   component/Lifecycle
   (start [component]

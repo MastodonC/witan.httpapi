@@ -1,6 +1,6 @@
 (ns witan.httpapi.api
   (:require [compojure.api.sweet :refer [context GET POST resource api]]
-            [ring.util.http-response :refer [ok]]
+            [ring.util.http-response :refer [ok unauthorized]]
             ;;
             [witan.httpapi.spec :as s]
             ;;
@@ -10,22 +10,48 @@
   [req]
   (get-in req [:components :auth]))
 
+(defn fail
+  ([status]
+   {:status status})
+  ([status body]
+   {:status status
+    :body body}))
+
+(defn success
+  [status body]
+  {:status status
+   :body body})
+
 (def healthcheck-routes
   (context "/" []
-           (GET "/healthcheck" []
-                (str "hello"))))
+    (GET "/healthcheck" []
+      (str "hello"))))
 
 (def api-routes
   (context "/api" []
     :tags ["api"]
     :coercion :spec
 
+    ;; Login and Refresh routes
+
     (POST "/login" req
       :summary "Retrieve an authorisation token for further API calls."
       :body-params [username :- ::s/username
                     password :- ::s/password]
-      :return ::s/auth-token
-      (auth/login (auth req) username password))
+      :return ::s/token-pair-container
+      (let [[status body] (auth/login (auth req) username password)]
+        (if (= status 201)
+          (success status body)
+          (fail status body))))
+
+    (POST "/refresh" req
+      :summary "Refreshes an authorisation token."
+      :body-params [token-pair :- ::s/token-pair]
+      :return ::s/token-pair-container
+      (let [[status body] (auth/refresh (auth req) token-pair)]
+        (if (= status 201)
+          (success status body)
+          (fail status body))))
 
     (GET "/plus" []
       :summary "plus with clojure.spec"
