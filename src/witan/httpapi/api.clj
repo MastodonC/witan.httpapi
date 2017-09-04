@@ -1,6 +1,7 @@
 (ns witan.httpapi.api
   (:require [compojure.api.sweet :refer [context GET POST resource api]]
             [ring.util.http-response :refer [ok unauthorized]]
+            [clj-time.core              :as t]
             ;;
             [witan.httpapi.spec :as s]
             ;;
@@ -27,12 +28,10 @@
     (GET "/healthcheck" []
       (str "hello"))))
 
-(def api-routes
+(def auth-routes
   (context "/api" []
     :tags ["api"]
     :coercion :spec
-
-    ;; Login and Refresh routes
 
     (POST "/login" req
       :summary "Retrieve an authorisation token for further API calls."
@@ -51,7 +50,22 @@
       (let [[status body] (auth/refresh (auth req) token-pair)]
         (if (= status 201)
           (success status body)
-          (fail status body))))
+          (fail status body))))))
+
+(defn authentication-middleware
+  [handler]
+  (fn [req]
+    (let [auth-header (get-in req [:headers "authorization"])]
+      (if (auth/authenticate (auth req) (t/now) auth-header)
+        (handler req)
+        (unauthorized)))))
+
+(def api-routes
+  (context "/api" []
+    :tags ["api"]
+    :coercion :spec
+    :header-params [authorization :- ::s/auth-token]
+    :middleware [authentication-middleware]
 
     (GET "/plus" []
       :summary "plus with clojure.spec"
@@ -95,4 +109,5 @@
      :data {:info {:title "Witan API (Datastore) "}
             :tags [{:name "api", :description "API routes for Witan"}]}}}
    healthcheck-routes
+   auth-routes
    api-routes))

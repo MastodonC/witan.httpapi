@@ -1,16 +1,34 @@
 (ns witan.httpapi.spec
   (:require [clojure.spec.alpha :as s]
             [spec-tools.spec :as spec]
-            [spec-tools.core :as st]))
+            [spec-tools.core :as st]
+            [schema.spec.leaf :as leaf]
+            [schema.spec.core :as sspec]))
 
-
+;; This macro allows us to give type hints to swagger
+;; when using complex specs
 (defmacro api-spec
   [symb typename]
   `(st/create-spec {:spec ~symb
                     :form '~symb
                     :json-schema/type ~typename}))
 
+;; This is so that context-level header-params
+;; can use spec for swagger, but they need Schema internally.
+;; This Schema extension simply wraps a call to spec/valid?
+(extend-protocol schema.core/Schema
+  clojure.lang.Keyword
+  (spec [this]
+    (leaf/leaf-spec
+     (sspec/precondition
+      this
+      #(s/valid? this %)
+      #(s/explain-data this %))))
+  (explain [this]
+    (str "clojure.spec: " this)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Conformers
 
 (defn -regex?
   [rs]
@@ -30,6 +48,7 @@
     (re-find #"^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,63}" s)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Specs
 
 (s/def ::x spec/int?)
 (s/def ::y spec/int?)
