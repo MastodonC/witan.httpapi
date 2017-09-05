@@ -47,7 +47,7 @@
 
   component/Lifecycle
   (start [component]
-    (log/info "Starting Authenticator")
+    (log/info "Starting Authenticator - loading pubkey from" pubkey)
     (let [pk (keys/public-key pubkey)]
       (assoc component :loaded-pubkey pk)))
 
