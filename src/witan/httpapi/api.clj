@@ -35,7 +35,7 @@
     :coercion :spec
 
     (POST "/login" req
-      :summary "Retrieve an authorisation token for further API calls."
+      :summary "Retrieve an authorisation token for further API calls"
       :body-params [username :- ::s/username
                     password :- ::s/password]
       :return ::s/token-pair-container
@@ -45,7 +45,7 @@
           (fail status body))))
 
     (POST "/refresh" req
-      :summary "Refreshes an authorisation token."
+      :summary "Refreshes an authorisation token"
       :body-params [token-pair :- ::s/token-pair]
       :return ::s/token-pair-container
       (let [[status body] (auth/refresh (auth req) token-pair)]
@@ -68,38 +68,52 @@
     :header-params [authorization :- ::s/auth-token]
     :middleware [authentication-middleware]
 
-    (GET "/plus" []
-      :summary "plus with clojure.spec"
-      :query-params [x :- ::s/x, {y :- ::s/y 0}]
-      :return ::s/total-map
-      (ok {:total (+ x y)}))
+    (context "/files" []
 
-    (GET "/plus2" []
-      :summary "plus2 with clojure.spec"
-      :query-params [x :- ::s/xs]
-      :return ::s/total-map
-      (ok {:total (apply + x)}))
+      (GET "/" req
+        :summary "Return a list of files the user has access to"
+        :return ::s/result
+        (ok "hello"))
 
-    (POST "/uuid" []
-      :summary "my funky uuid"
-      :body-params [id :- ::s/id]
-      :return ::s/result
-      (ok {:result id}))
+      (POST "/upload" req
+        :summary "Returns an upload address for a new file"
+        :return ::s/result
+        (ok "hello"))
 
-    (POST "/file" []
-      :summary "my funky file"
-      :body-params [file :- ::s/file]
-      :return ::s/result
-      (ok {:result file}))
+      (GET "/:id" req
+        :summary "Return details of a specific file"
+        :return ::s/result
+        (ok "hello"))
 
-    #_(context "/data-plus" []
-        (resource
-         {:post
-          {:summary "data-driven plus with clojure.spec"
-           :parameters {:body-params (s/keys :req-un [::s/x ::s/y])}
-           :responses {200 {:schema ::s/total-map}}
-           :handler (fn [{{:keys [x y]} :body-params}]
-                      (ok {:total (+ x y)}))}}))))
+      (GET "/:id/metadata" req
+        :summary "Return metadata for a specific file"
+        :return ::s/result
+        (ok "hello"))
+
+      (POST "/:id/metadata" req
+        :summary "Update metadata for a specific file"
+        :return ::s/result
+        (ok "hello"))
+
+      (GET "/:id/error" req
+        :summary "Return errors for a specific file"
+        :return ::s/result
+        (ok "hello"))
+
+      (GET "/:id/sharing" req
+        :summary "Return sharing data for a specific file"
+        :return ::s/result
+        (ok "hello"))
+
+      (GET "/:id/link" req
+        :summary "Return a download token for a specific file"
+        :return ::s/result
+        (ok "hello"))
+
+      (GET "/:id/link/:link-id" req
+        :summary "Return a download address for a specific file and token"
+        :return ::s/result
+        (ok "hello")))))
 
 (def handler
   (api
