@@ -2,6 +2,7 @@
   (:require [compojure.api.sweet :refer [context GET POST resource api]]
             [ring.util.http-response :refer [ok unauthorized]]
             [clj-time.core              :as t]
+            [taoensso.timbre :as log]
             ;;
             [witan.httpapi.spec :as s]
             ;;

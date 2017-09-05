@@ -12,6 +12,20 @@
             [witan.httpapi.components.webserver :as webserver]
             [witan.httpapi.components.requests :as requests]))
 
+(defn new-requester
+  [config]
+  (requests/->HttpRequester (:directory config)))
+
+(defn new-authenticator
+  [config]
+  (auth/map->PubKeyAuthenticator (:auth config)))
+
+(defn new-webserver
+  [config]
+  (webserver/->WebServer api/handler (:webserver config)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn new-system [profile]
   (timbre/debug "Profile" profile)
   (let [config (read-config (clojure.java.io/resource "config.edn") {:profile profile})
@@ -28,12 +42,12 @@
     #_(comms/set-verbose-logging! (:verbose-logging? config))
 
     (component/system-map
-     :requester (requests/->HttpRequester (:directory config))
+     :requester (new-requester config)
      :auth (component/using
-            (auth/map->PubKeyAuthenticator (:auth config))
+            (new-authenticator config)
             [:requester])
      :webserver (component/using
-                 (webserver/->WebServer api/handler (:webserver config))
+                 (new-webserver config)
                  [:auth]))))
 
 (defn -main [& [arg]]
