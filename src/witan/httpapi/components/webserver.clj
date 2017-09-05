@@ -3,15 +3,23 @@
             [taoensso.timbre :as log]
             [aleph.http :as http]))
 
+(defn wrap-components
+  "Assoc given components to the request."
+  [handler components]
+  (fn [req]
+    (handler (assoc req :components components))))
+
 (defn start-aleph-server
-  [handler port]
-  (http/start-server handler {:port port}))
+  [handler port components]
+  (http/start-server (-> handler
+                         (wrap-components components))
+                     {:port port}))
 
 (defrecord WebServer [handler config]
   component/Lifecycle
   (start [this]
-    (log/info "Starting Web Server on port" (:port config))
-    (let [s (start-aleph-server handler (:port config))]
+    (log/info "Starting Web Server on port" (:port config) (keys this))
+    (let [s (start-aleph-server handler (:port config) this)]
       (log/debug "Web Server started")
       (assoc this :server s)))
   (stop [this]
