@@ -3,7 +3,9 @@
             [spec-tools.spec :as spec]
             [spec-tools.core :as st]
             [schema.spec.leaf :as leaf]
-            [schema.spec.core :as sspec]))
+            [schema.spec.core :as sspec]
+            [clj-time.core :as t]
+            [clj-time.format :as tf]))
 
 ;; This macro allows us to give type hints to swagger
 ;; when using complex specs
@@ -42,6 +44,32 @@
 
 (def uuid (s/conformer uuid? identity))
 
+(def format :basic-date-time)
+(def date-format :basic-date)
+
+(def formatter
+  (tf/formatters format))
+
+(def date-formatter
+  (tf/formatters date-format))
+
+(def time-parser
+  (partial tf/parse time/formatter))
+
+(def date-parser
+  (partial tf/parse time/date-formatter))
+
+(defn timestamp?
+  [x]
+  (if (instance? org.joda.time.DateTime x)
+    x
+    (try
+      (if (string? x)
+        (time-parser x)
+        :clojure.spec/invalid)
+      (catch IllegalArgumentException e
+        :clojure.spec/invalid))))
+
 (defn email?
   [s]
   (when-not (clojure.string/blank? s)
@@ -67,6 +95,18 @@
 (s/def ::refresh-token spec/string?)
 (s/def ::token-pair (s/keys :req-un [::auth-token ::refresh-token]))
 (s/def ::token-pair-container (s/keys :req-un [::token-pair]))
+
+;; Metadata
+(s/def :kixi.datastore.metadatastore/size-bytes spec/int?)
+(s/def :kixi.datastore.metadatastore/file-type spec/string?)
+(s/def :kixi.datastore.metadatastore/header spec/boolean?)
+(s/def :kixi.datastore.metadatastore/name spec/string?)
+(s/def :kixi.datastore.metadatastore/id (api-spec uuid "string"))
+(s/def :kixi.datastore.metadatastore/type spec/string?)
+(s/def :kixi.datastore.metadatastore/description spec/string?)
+(s/def :kixi.datastore.metadatastore/source spec/string?)
+(s/def :kixi.user/id (api-spec uuid "string"))
+(s/def :kixi.datastore.metadatastore/created timestamp?)
 
 ;; Files
 (s/def ::total spec/int?)

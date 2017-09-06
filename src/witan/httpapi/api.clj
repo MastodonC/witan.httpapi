@@ -105,7 +105,10 @@
       (GET "/:id/metadata" req
         :summary "Return metadata for a specific file"
         :return ::s/result
-        (ok "hello"))
+        (let [[s r] (query/get-file-metadata (requester req) (:user req) (:id (:params req)))]
+          (if (success? s)
+            (success s r)
+            (fail s))))
 
       (POST "/:id/metadata" req
         :summary "Update metadata for a specific file"
@@ -120,7 +123,10 @@
       (GET "/:id/sharing" req
         :summary "Return sharing data for a specific file"
         :return ::s/result
-        (ok "hello"))
+        (let [[s r] (query/get-file-sharing-info (requester req) (:user req) (:id (:params req)))]
+          (if (success? s)
+            (success s r)
+            (fail s))))
 
       (POST "/:id/sharing" req
         :summary "Update sharing data for a specific file"

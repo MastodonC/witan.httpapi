@@ -25,3 +25,15 @@
                 :datastore
                 (str "/metadata/" id)
                 {:headers (user-header user)}))
+
+(defn get-file-metadata [requester user id]
+  (let [[status cds-response] (get-file-info requester user id)]
+    (if (= status 200)
+      [status (dissoc cds-response :kixi.datastore.metadatastore/sharing)]
+      [status cds-response])))
+
+(defn get-file-sharing-info [requester user id]
+  (let [[status cds-response] (get-file-info requester user id)]
+    (if (= status 200)
+      [status (select-keys cds-response [:kixi.datastore.metadatastore/sharing])]
+      [status cds-response])))
