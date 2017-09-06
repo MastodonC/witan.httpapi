@@ -76,7 +76,7 @@
         (ok "hello"))
 
       (POST "/upload" req
-        :summary "Returns an upload address for a new file"
+        :summary "Creates an upload address for a new file"
         :return ::s/result
         (ok "hello"))
 
@@ -105,8 +105,13 @@
         :return ::s/result
         (ok "hello"))
 
-      (GET "/:id/link" req
-        :summary "Return a download token for a specific file"
+      (POST "/:id/sharing" req
+        :summary "Update sharing data for a specific file"
+        :return ::s/result
+        (ok "hello"))
+
+      (POST "/:id/link" req
+        :summary "Creates a download token for a specific file"
         :return ::s/result
         (ok "hello"))
 
