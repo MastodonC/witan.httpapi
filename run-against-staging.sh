@@ -26,6 +26,6 @@ function cleanup {
 }
 trap cleanup EXIT
 echo "Creating resources/local.edn"
-echo "{:zk \"$(dig masters.staging.witan.mastodonc.net A +noall +answer | tail -n 1 | awk '{print $NF}')\" :auth-pubkey \"$STAGING_AUTH_PUBKEY\"}" > resources/local.edn
-echo "You can now run witan.gateway with the :dev-staging profile. Ctrl+C to exit..."
+echo "{:auth-pubkey \"$STAGING_AUTH_PUBKEY\"}" > resources/local.edn
+echo "You can now run witan.httpapi with the :dev-staging profile. Ctrl+C to exit..."
 while true; do sleep 2; done

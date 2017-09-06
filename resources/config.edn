@@ -1,5 +1,5 @@
 {:service-name "witan.httpapi"
- ;;:local-args #include "local.edn"
+ :local-args #include "local.edn"
  :webserver {:port 8015}
  :log {:level #profile {:default :debug
                         :staging :info

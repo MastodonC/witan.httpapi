@@ -5,12 +5,17 @@
             [taoensso.timbre :as log]
             ;;
             [witan.httpapi.spec :as s]
+            [witan.httpapi.queries :as query]
             ;;
             [witan.httpapi.components.auth :as auth]))
 
 (defn auth
   [req]
   (get-in req [:components :auth]))
+
+(defn requester
+  [req]
+  (get-in req [:components :requester]))
 
 (defn fail
   ([status]
@@ -21,8 +26,14 @@
 
 (defn success
   [status body]
+  (log/debug "Returning successful response" status)
   {:status status
    :body body})
+
+(defn success?
+  [status]
+  (and (>= status 200)
+       (< status 300)))
 
 (def healthcheck-routes
   (context "/" []
@@ -57,8 +68,8 @@
   [handler]
   (fn [req]
     (let [auth-header (get-in req [:headers "authorization"])]
-      (if (auth/authenticate (auth req) (t/now) auth-header)
-        (handler req)
+      (if-let [user (auth/authenticate (auth req) (t/now) auth-header)]
+        (handler (assoc req :user user))
         (unauthorized)))))
 
 (def api-routes
@@ -72,8 +83,11 @@
 
       (GET "/" req
         :summary "Return a list of files the user has access to"
-        :return ::s/result
-        (ok "hello"))
+        :return ::s/paged-items
+        (let [[s r] (query/get-files-by-user (requester req) (:user req))]
+          (if (success? s)
+            (success s r)
+            (fail s))))
 
       (POST "/upload" req
         :summary "Creates an upload address for a new file"

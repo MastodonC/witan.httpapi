@@ -68,4 +68,10 @@
 (s/def ::token-pair (s/keys :req-un [::auth-token ::refresh-token]))
 (s/def ::token-pair-container (s/keys :req-un [::token-pair]))
 
-(s/def ::file (s/keys :req-un [::id ::x ::username]))
+;; Files
+(s/def ::total spec/int?)
+(s/def ::count spec/int?)
+(s/def ::index spec/int?)
+(s/def ::items (s/coll-of (s/keys)))
+(s/def ::paging (s/keys :req-un [::total ::count ::index]))
+(s/def ::paged-items (s/keys :req-un [::items ::paging]))

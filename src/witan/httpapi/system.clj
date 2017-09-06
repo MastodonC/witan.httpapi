@@ -48,7 +48,7 @@
             [:requester])
      :webserver (component/using
                  (new-webserver config)
-                 [:auth]))))
+                 [:auth :requester]))))
 
 (defn -main [& [arg]]
   (let [profile (or (keyword arg) :staging)
