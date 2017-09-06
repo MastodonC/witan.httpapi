@@ -19,3 +19,9 @@
                 "/metadata"
                 {:query-params {:activity (mapv encode-kw [:kixi.datastore.metadatastore/meta-read])}
                  :headers (user-header user)}))
+
+(defn get-file-info [requester user id]
+  (requests/GET requester
+                :datastore
+                (str "/metadata/" id)
+                {:headers (user-header user)}))

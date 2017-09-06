@@ -97,7 +97,10 @@
       (GET "/:id" req
         :summary "Return details of a specific file"
         :return ::s/result
-        (ok "hello"))
+        (let [[s r] (query/get-file-info (requester req) (:user req) (:id (:params req)))]
+          (if (success? s)
+            (success s r)
+            (fail s))))
 
       (GET "/:id/metadata" req
         :summary "Return metadata for a specific file"
