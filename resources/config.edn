@@ -21,11 +21,39 @@
  :verbose-logging? #profile {:default true
                              :staging false
                              :prod false}
+
+ :aws {:eu-central-1 {:region "eu-central-1"
+                      :sns  "arn:aws:sns:eu-central-1:165664414043:witan-to-slack"
+                      :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT "http://dynamodb.eu-central-1.amazonaws.com"]
+                      :kinesis-endpoint #or [#env KINESIS_ENDPOINT "https://kinesis.eu-central-1.amazonaws.com"] }
+       :eu-west-1 {:region "eu-west-1"
+                   :sns "arn:aws:sns:eu-west-1:720433613167:prod-witan-to-slack"
+                   :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT "http://dynamodb.eu-west-1.amazonaws.com"]
+                   :kinesis-endpoint #or [#env KINESIS_ENDPOINT "https://kinesis.eu-west-1.amazonaws.com"]}}
+
+ :dynamodb #profile {:development {:prefix "dev"
+                                   :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}}
+                     :dev-docker {:prefix "dev"
+                                  :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}}
+                     :test {:prefix "test"
+                            :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}
+                            :alerts false}
+                     :staging-jenkins {:prefix "staging-jenkins"
+                                       :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}}
+                     :staging {:prefix "staging"
+                               :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}
+                               :alerts {:sns ^:ref [:aws :eu-central-1 :sns]
+                                        :region ^:ref [:aws :eu-central-1 :region]}}
+                     :prod {:prefix "prod"
+                            :db {:endpoint ^:ref [:aws :eu-west-1 :dynamodb-endpoint]}
+                            :alerts {:sns ^:ref [:aws :eu-west-1 :sns]
+                                     :region ^:ref [:aws :eu-west-1 :region]}}}
+
  :comms {:kinesis #profile {:default {:profile "dev"
                                       :app ^:ref [:service-name]
-                                      :endpoint "kinesis.eu-central-1.amazonaws.com"
-                                      :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT "dynamodb.eu-central-1.amazonaws.com"]
-                                      :region-name "eu-central-1"
+                                      :endpoint ^:ref [:aws :eu-central-1 :kinesis-endpoint]
+                                      :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT ^:ref [:aws :eu-central-1 :dynamodb-endpoint]]
+                                      :region-name ^:ref [:aws :eu-central-1 :region]
                                       :metric-level :NONE
                                       :initial-lease-table-read-capacity 1
                                       :initial-lease-table-write-capacity 1
@@ -33,9 +61,9 @@
                                                 :command #or [#env COMMAND_STREAM "witan-dev-command"]}}
                             :dev-staging {:profile "dev"
                                           :app ^:ref [:service-name]
-                                          :endpoint "kinesis.eu-central-1.amazonaws.com"
-                                          :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT "dynamodb.eu-central-1.amazonaws.com"]
-                                          :region-name "eu-central-1"
+                                          :endpoint ^:ref [:aws :eu-central-1 :kinesis-endpoint]
+                                          :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT ^:ref [:aws :eu-central-1 :dynamodb-endpoint]]
+                                          :region-name ^:ref [:aws :eu-central-1 :region]
                                           :metric-level :NONE
                                           :initial-lease-table-read-capacity 1
                                           :initial-lease-table-write-capacity 1
@@ -43,9 +71,9 @@
                                                     :command #or [#env COMMAND_STREAM "staging-witan-command"]}}
                             :staging-jenkins {:profile "staging-jenkins"
                                               :app ^:ref [:service-name]
-                                              :endpoint "kinesis.eu-central-1.amazonaws.com"
-                                              :dynamodb-endpoint "dynamodb.eu-central-1.amazonaws.com"
-                                              :region-name "eu-central-1"
+                                              :endpoint ^:ref [:aws :eu-central-1 :kinesis-endpoint]
+                                              :dynamodb-endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]
+                                              :region-name ^:ref [:aws :eu-central-1 :region]
                                               :metric-level :NONE
                                               :initial-lease-table-read-capacity 1
                                               :initial-lease-table-write-capacity 1
@@ -53,9 +81,9 @@
                                                         :command "staging-witan-command"}}
                             :staging {:profile "staging"
                                       :app ^:ref [:service-name]
-                                      :endpoint "kinesis.eu-central-1.amazonaws.com"
-                                      :dynamodb-endpoint "dynamodb.eu-central-1.amazonaws.com"
-                                      :region-name "eu-central-1"
+                                      :endpoint ^:ref [:aws :eu-central-1 :kinesis-endpoint]
+                                      :dynamodb-endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]
+                                      :region-name ^:ref [:aws :eu-central-1 :region]
                                       :metric-level :NONE
                                       :initial-lease-table-read-capacity 1
                                       :initial-lease-table-write-capacity 1
@@ -63,9 +91,9 @@
                                                 :command "staging-witan-command"}}
                             :prod {:profile "prod"
                                    :app ^:ref [:service-name]
-                                   :endpoint "kinesis.eu-west-1.amazonaws.com"
-                                   :dynamodb-endpoint "dynamodb.eu-west-1.amazonaws.com"
-                                   :region-name "eu-west-1"
+                                   :endpoint ^:ref [:aws :eu-west-1 :kinesis-endpoint]
+                                   :dynamodb-endpoint ^:ref [:aws :eu-west-1 :dynamodb-endpoint]
+                                   :region-name ^:ref [:aws :eu-west-1 :region]
                                    :metric-level :NONE
                                    :initial-lease-table-read-capacity 2
                                    :initial-lease-table-write-capacity 2
