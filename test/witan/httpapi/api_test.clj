@@ -70,3 +70,11 @@
                                :refresh-token "345"}}})))]
     (is (= 201 s))
     (is-spec ::s/token-pair-container r)))
+
+(deftest swagger-test
+  (let [[r s] (->result
+               (http/get (local-url "/swagger.json")
+                         {:throw-exceptions false
+                          :as :json}))]
+    (is (= 200 s) "An error here could indicate a problem generating the swagger JSON")
+    (is (= "2.0" (:swagger r)))))
