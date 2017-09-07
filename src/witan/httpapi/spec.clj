@@ -5,7 +5,8 @@
             [schema.spec.leaf :as leaf]
             [schema.spec.core :as sspec]
             [clj-time.core :as t]
-            [clj-time.format :as tf]))
+            [clj-time.format :as tf]
+            [kixi.comms :as comms]))
 
 ;; This macro allows us to give type hints to swagger
 ;; when using complex specs
@@ -88,14 +89,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Specs
 
-(s/def ::x spec/int?)
-(s/def ::y spec/int?)
-(s/def ::total spec/int?)
-(s/def ::total-map (s/keys :req-un [::total]))
 (s/def ::result (s/keys))
-(s/def ::xs (s/coll-of spec/int?))
 (s/def ::id (api-spec uuid? "string"))
-
 (s/def ::error spec/string?)
 
 ;; Auth
@@ -156,3 +151,14 @@
 (s/def ::items (s/coll-of (s/keys)))
 (s/def ::paging (s/keys :req-un [::total ::count ::index]))
 (s/def ::paged-items (s/keys :req-un [::items ::paging]))
+
+;; Receipts
+(s/def ::receipt (api-spec uuid? "string"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Commands
+
+(defmethod comms/command-payload
+  [:kixi.datastore.filestore/create-upload-link "1.0.0"]
+  [_]
+  (s/keys))

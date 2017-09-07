@@ -3,18 +3,24 @@
   (:require [com.stuartsierra.component :as component]
             [aero.core :refer [read-config]]
             [kixi.log :as kixi-log]
-            #_[kixi.comms :as comms]
+            [kixi.comms :as comms]
+            [kixi.comms.components.kinesis :as kinesis]
             [taoensso.timbre :as timbre]
             [signal.handler :refer [with-handler]]
             ;;
             [witan.httpapi.api :as api]
             [witan.httpapi.components.auth :as auth]
             [witan.httpapi.components.webserver :as webserver]
-            [witan.httpapi.components.requests :as requests]))
+            [witan.httpapi.components.requests :as requests]
+            [witan.httpapi.components.activities :as activities]))
 
 (defn new-requester
   [config]
   (requests/->HttpRequester (:directory config)))
+
+(defn new-activities
+  []
+  (activities/->Activities))
 
 (defn new-authenticator
   [config]
@@ -23,6 +29,10 @@
 (defn new-webserver
   [config]
   (webserver/->WebServer api/handler (:webserver config)))
+
+(defn new-comms
+  [config]
+  (kinesis/map->Kinesis (get-in config [:comms :kinesis])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -39,16 +49,20 @@
                          {:direct-json (kixi-log/timbre-appender-logstash)}
                          {:println (timbre/println-appender)})))
 
-    #_(comms/set-verbose-logging! (:verbose-logging? config))
+    (comms/set-verbose-logging! (:verbose-logging? config))
 
     (component/system-map
+     :comms (new-comms config)
      :requester (new-requester config)
+     :activities (component/using
+                  (new-activities)
+                  [:comms])
      :auth (component/using
             (new-authenticator config)
             [:requester])
      :webserver (component/using
                  (new-webserver config)
-                 [:auth :requester]))))
+                 [:auth :requester :activities]))))
 
 (defn -main [& [arg]]
   (let [profile (or (keyword arg) :staging)

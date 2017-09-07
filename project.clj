@@ -13,6 +13,7 @@
                  [environ "1.1.0"]
                  [aero "1.1.2"]
                  [aleph "0.4.3"]
+                 [com.gfredericks/schpec "0.1.2"]
                  [spootnik/signal "0.2.1"]
                  [metosin/compojure-api "2.0.0-alpha7"]
                  [metosin/spec-tools "0.3.2"]

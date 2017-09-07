@@ -17,4 +17,57 @@
              :datastore #profile {:default {:host "kixi.datastore.marathon.mesos"
                                             :port 18080}
                                   :development {:host #or [#env DATASTORE_HOST "localhost"]
-                                                :port #or [#env DATASTORE_PORT 8080]}}}}
+                                                :port #or [#env DATASTORE_PORT 8080]}}}
+ :verbose-logging? #profile {:default true
+                             :staging false
+                             :prod false}
+ :comms {:kinesis #profile {:default {:profile "dev"
+                                      :app ^:ref [:service-name]
+                                      :endpoint "kinesis.eu-central-1.amazonaws.com"
+                                      :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT "dynamodb.eu-central-1.amazonaws.com"]
+                                      :region-name "eu-central-1"
+                                      :metric-level :NONE
+                                      :initial-lease-table-read-capacity 1
+                                      :initial-lease-table-write-capacity 1
+                                      :streams {:event #or [#env EVENT_STREAM "witan-dev-event"]
+                                                :command #or [#env COMMAND_STREAM "witan-dev-command"]}}
+                            :dev-staging {:profile "dev"
+                                          :app ^:ref [:service-name]
+                                          :endpoint "kinesis.eu-central-1.amazonaws.com"
+                                          :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT "dynamodb.eu-central-1.amazonaws.com"]
+                                          :region-name "eu-central-1"
+                                          :metric-level :NONE
+                                          :initial-lease-table-read-capacity 1
+                                          :initial-lease-table-write-capacity 1
+                                          :streams {:event #or [#env EVENT_STREAM "staging-witan-event"]
+                                                    :command #or [#env COMMAND_STREAM "staging-witan-command"]}}
+                            :staging-jenkins {:profile "staging-jenkins"
+                                              :app ^:ref [:service-name]
+                                              :endpoint "kinesis.eu-central-1.amazonaws.com"
+                                              :dynamodb-endpoint "dynamodb.eu-central-1.amazonaws.com"
+                                              :region-name "eu-central-1"
+                                              :metric-level :NONE
+                                              :initial-lease-table-read-capacity 1
+                                              :initial-lease-table-write-capacity 1
+                                              :streams {:event "staging-witan-event"
+                                                        :command "staging-witan-command"}}
+                            :staging {:profile "staging"
+                                      :app ^:ref [:service-name]
+                                      :endpoint "kinesis.eu-central-1.amazonaws.com"
+                                      :dynamodb-endpoint "dynamodb.eu-central-1.amazonaws.com"
+                                      :region-name "eu-central-1"
+                                      :metric-level :NONE
+                                      :initial-lease-table-read-capacity 1
+                                      :initial-lease-table-write-capacity 1
+                                      :streams {:event "staging-witan-event"
+                                                :command "staging-witan-command"}}
+                            :prod {:profile "prod"
+                                   :app ^:ref [:service-name]
+                                   :endpoint "kinesis.eu-west-1.amazonaws.com"
+                                   :dynamodb-endpoint "dynamodb.eu-west-1.amazonaws.com"
+                                   :region-name "eu-west-1"
+                                   :metric-level :NONE
+                                   :initial-lease-table-read-capacity 2
+                                   :initial-lease-table-write-capacity 2
+                                   :streams {:event "prod-witan-event"
+                                             :command "prod-witan-command"}}}}}
