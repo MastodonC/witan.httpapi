@@ -110,9 +110,9 @@
 (s/def :kixi.user/id (api-spec uuid? "string"))
 
 ;; Permissions
-(s/def :kixi.datastore.metadatastore/meta-read (s/coll-of (api-spec uuid? "string")))
-(s/def :kixi.datastore.metadatastore/meta-update (s/coll-of (api-spec uuid? "string")))
-(s/def :kixi.datastore.metadatastore/file-read (s/coll-of (api-spec uuid? "string")))
+(s/def :kixi.datastore.metadatastore/meta-read (s/coll-of spec/string?))
+(s/def :kixi.datastore.metadatastore/meta-update (s/coll-of spec/string?))
+(s/def :kixi.datastore.metadatastore/file-read (s/coll-of spec/string?))
 
 ;; Metadata
 (s/def :kixi.datastore.metadatastore/size-bytes (api-spec bigint? "integer"))
@@ -132,24 +132,22 @@
                                                            :kixi.datastore.metadatastore/meta-update
                                                            :kixi.datastore.metadatastore/file-read]))
 
-(def file-info-keys #{:kixi.datastore.metadatastore/size-bytes
-                      :kixi.datastore.metadatastore/file-type
-                      :kixi.datastore.metadatastore/header
-                      :kixi.datastore.metadatastore/name
-                      :kixi.datastore.metadatastore/id
-                      :kixi.datastore.metadatastore/type
-                      :kixi.datastore.metadatastore/description
-                      :kixi.datastore.metadatastore/provenance
-                      :kixi.datastore.metadatastore/sharing})
-
-(s/def ::file-info
-  (s/keys :req (vec file-info-keys)))
-
 (s/def ::file-metadata
-  (s/keys :req (vec (disj file-info-keys :kixi.datastore.metadatastore/sharing))))
+  (s/keys :req [:kixi.datastore.metadatastore/size-bytes
+                :kixi.datastore.metadatastore/file-type
+                :kixi.datastore.metadatastore/header
+                :kixi.datastore.metadatastore/name
+                :kixi.datastore.metadatastore/id
+                :kixi.datastore.metadatastore/type
+                :kixi.datastore.metadatastore/description
+                :kixi.datastore.metadatastore/provenance]))
 
 (s/def ::file-sharing
   (s/keys :req [:kixi.datastore.metadatastore/sharing]))
+
+(s/def ::file-info
+  (s/merge ::file-metadata
+           ::file-sharing))
 
 ;; Files
 (s/def ::total spec/int?)
