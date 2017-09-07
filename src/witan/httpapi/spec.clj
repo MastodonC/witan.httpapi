@@ -39,10 +39,18 @@
       x
       ::s/invalid)))
 
-(def uuid?
+(def -uuid?
   (-regex? #"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))
 
-(def uuid (s/conformer uuid? identity))
+(def uuid? (s/conformer -uuid? identity))
+
+(defn -bigint?
+  [x]
+  (if (instance? clojure.lang.BigInt x)
+    x
+    ::s/invalid))
+
+(def bigint? (s/conformer -bigint? identity))
 
 (def format :basic-date-time)
 (def date-format :basic-date)
@@ -54,21 +62,23 @@
   (tf/formatters date-format))
 
 (def time-parser
-  (partial tf/parse time/formatter))
+  (partial tf/parse formatter))
 
 (def date-parser
-  (partial tf/parse time/date-formatter))
+  (partial tf/parse date-formatter))
 
-(defn timestamp?
+(defn -timestamp?
   [x]
   (if (instance? org.joda.time.DateTime x)
     x
     (try
       (if (string? x)
         (time-parser x)
-        :clojure.spec/invalid)
+        ::s/invalid)
       (catch IllegalArgumentException e
-        :clojure.spec/invalid))))
+        ::s/invalid))))
+
+(def timestamp? (s/conformer -timestamp? identity))
 
 (defn email?
   [s]
@@ -84,7 +94,7 @@
 (s/def ::total-map (s/keys :req-un [::total]))
 (s/def ::result (s/keys))
 (s/def ::xs (s/coll-of spec/int?))
-(s/def ::id (api-spec uuid "string"))
+(s/def ::id (api-spec uuid? "string"))
 
 (s/def ::error spec/string?)
 
@@ -96,16 +106,18 @@
 (s/def ::token-pair (s/keys :req-un [::auth-token ::refresh-token]))
 (s/def ::token-pair-container (s/keys :req-un [::token-pair]))
 
+;; User
+(s/def :kixi.user/id (api-spec uuid? "string"))
+
 ;; Metadata
-(s/def :kixi.datastore.metadatastore/size-bytes spec/int?)
+(s/def :kixi.datastore.metadatastore/size-bytes (api-spec bigint? "integer"))
 (s/def :kixi.datastore.metadatastore/file-type spec/string?)
 (s/def :kixi.datastore.metadatastore/header spec/boolean?)
 (s/def :kixi.datastore.metadatastore/name spec/string?)
-(s/def :kixi.datastore.metadatastore/id (api-spec uuid "string"))
+(s/def :kixi.datastore.metadatastore/id (api-spec uuid? "string"))
 (s/def :kixi.datastore.metadatastore/type spec/string?)
 (s/def :kixi.datastore.metadatastore/description spec/string?)
 (s/def :kixi.datastore.metadatastore/source spec/string?)
-(s/def :kixi.user/id (api-spec uuid "string"))
 (s/def :kixi.datastore.metadatastore/created timestamp?)
 
 ;; Files
