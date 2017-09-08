@@ -12,7 +12,6 @@
 (defn up
   [db]
   (let [conn (db/new-session (get-db-config) @config/profile)]
-
     (db/create-table conn
                      queries/receipts-table
                      [:id :s]

@@ -4,7 +4,7 @@
             [joplin.repl :as jrepl :refer [migrate load-config]]
             [taoensso.timbre :as log]
             [taoensso.faraday :as far]
-            [kixi.heimdall.cloudwatch :refer [table-dynamo-alarms]]))
+            [witan.httpapi.cloudwatch :refer [table-dynamo-alarms]]))
 
 (def app "witan.httpapi")
 
@@ -19,6 +19,7 @@
 (defn alerts
   [conf]
   (:alerts (:db-conf conf)))
+
 (defn db
   [conf]
   (or (:db (:db-conf conf)) {}))
