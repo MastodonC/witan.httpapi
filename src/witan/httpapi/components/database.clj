@@ -4,6 +4,7 @@
             [joplin.repl :as jrepl :refer [migrate load-config]]
             [taoensso.timbre :as log]
             [taoensso.faraday :as far]
+            [clojure.spec.alpha :as s]
             [witan.httpapi.cloudwatch :refer [table-dynamo-alarms]]))
 
 (def app "witan.httpapi")
@@ -40,6 +41,8 @@
   [conf]
   (get-in conf [:db-conf :alerts]))
 
+(defmulti table-spec identity)
+
 (defprotocol Database
   (create-table [this table index opts])
   (delete-table [this table])
@@ -74,14 +77,18 @@
                       (decorated-table table (prefix this))
                       opts))
   (put-item [this table record opts]
-    (far/put-item (db this)
-                  (decorated-table table (prefix this))
-                  (convert-keywords-for-db record)
-                  opts))
+    (let [record-spec (table-spec table)]
+      (if-let [err (s/explain-data record-spec record)]
+        (throw (java.lang.IllegalArgumentException.
+                (str "Record was not a valid " record-spec "\n" (prn-str err))))
+        (far/put-item (db this)
+                      (decorated-table table (prefix this))
+                      (convert-keywords-for-db record)
+                      opts))))
   (get-item [this table where opts]
     (far/get-item (db this)
                   (decorated-table table (prefix this))
-                  where
+                  (convert-keywords-for-db where)
                   opts))
   (query [this table where opts]
     (far/query (db this)

@@ -10,6 +10,13 @@
 (sh/alias 'command 'kixi.command)
 
 (def receipts-table "receipts")
+(def upload-links-table "upload-links")
+
+(defmethod database/table-spec
+  receipts-table [_] ::spec/receipt)
+
+(defmethod database/table-spec
+  upload-links-table [_] ::spec/upload-link)
 
 (defn send-valid-command!*
   "Eventually deprecate this function for comms/send-valid-command!"
@@ -46,12 +53,34 @@
                       ::spec/last-updated-at (comms/timestamp)}]
     (database/put-item database receipts-table spec-receipt nil)))
 
+(defn save-upload-link! [database user id file-id upload-link]
+  (let [spec-upload-link {::spec/id id
+                          :kixi.user/id (:kixi.user/id user)
+                          :kixi.datastore.filestore/id file-id
+                          ::spec/created-at (comms/timestamp)
+                          ::spec/uri upload-link}]
+    (database/put-item database upload-links-table spec-upload-link nil)))
+
 (defn new-receipt
   []
   (let [receipt (comms/uuid)
         location (str "/receipts/" receipt)]
     {:receipt receipt
      :location location}))
+
+(defn check-receipt
+  [act user receipt]
+  (let [redirect "http://www.google.com"]
+    [303
+     nil
+     {"Location" redirect}]))
+
+(defn retreive-receipt
+  [db receipt]
+  (database/get-item db receipts-table {::spec/id receipt} nil))
+
+(defn complete-receipt!
+  [db id uri])
 
 (defn create-file-upload!
   [{:keys [comms database]} user]
@@ -66,35 +95,37 @@
      {:receipt receipt}
      {"Location" location}]))
 
-(defn check-receipt
-  [act user receipt]
-  (let [redirect "http://www.google.com"]
-    [303
-     nil
-     {"Location" redirect}]))
-
 (defmulti on-event
-  (fn [{:keys [kixi.comms.event/key
+  (fn [_ {:keys [kixi.comms.event/key
                kixi.comms.event/version]}] [key version]))
 
 (defmethod on-event
   [:kixi.datastore.filestore/upload-link-created "1.0.0"]
-  [{:keys [kixi.comms.command/id]}]
-  (log/debug "Received :kixi.datastore.filestore/create-upload-link event with command id:" id)
+  [db {:keys [kixi.comms.event/payload] :as event}]
+  (let [command-id (:kixi.comms.command/id event)]
+    (when-let [receipt (retreive-receipt db command-id)]
+      (let [{:keys [kixi.datastore.filestore/upload-link
+                    kixi.datastore.filestore/id]} payload]
+        (save-upload-link! db
+                           (select-keys payload [:kixi.user/id])
+                           command-id
+                           id
+                           upload-link)
+        (complete-receipt! db command-id (str "/files/upload/" command-id)))))
   nil)
 
 ;;
 
 (defrecord Activities []
   component/Lifecycle
-  (start [{:keys [comms] :as component}]
+  (start [{:keys [comms database] :as component}]
     (log/info "Starting Activities" (type comms))
     (let [ehs [(comms/attach-event-handler!
                 comms
                 :witan-httpapi-activity-upload-file
                 :kixi.datastore.filestore/upload-link-created
                 "1.0.0"
-                on-event)]]
+                (partial on-event database))]]
       (assoc component :ehs ehs)))
 
   (stop [{:keys [comms] :as component}]

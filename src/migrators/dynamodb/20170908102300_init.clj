@@ -17,9 +17,15 @@
                      activities/receipts-table
                      [(db/keywordns->db ::spec/id) :s]
                      {:throughput {:read 1 :write 1}
+                      :block? true})
+    (db/create-table conn
+                     activities/upload-links-table
+                     [(db/keywordns->db ::spec/id) :s]
+                     {:throughput {:read 1 :write 1}
                       :block? true})))
 
 (defn down
   [db]
   (let [conn (db/new-session (get-db-config) @config/profile)]
-    (db/delete-table conn activities/receipts-table)))
+    (db/delete-table conn activities/receipts-table)
+    (db/delete-table conn activities/upload-links-table)))

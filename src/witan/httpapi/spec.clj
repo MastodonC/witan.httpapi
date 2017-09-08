@@ -126,6 +126,7 @@
 (s/def :kixi.datastore.metadatastore/sharing (s/keys :opt [:kixi.datastore.metadatastore/meta-read
                                                            :kixi.datastore.metadatastore/meta-update
                                                            :kixi.datastore.metadatastore/file-read]))
+(s/def :kixi.datastore.filestore/id (api-spec uuid? "string"))
 
 (s/def ::file-metadata
   (s/keys :req [:kixi.datastore.metadatastore/size-bytes
@@ -165,6 +166,13 @@
                 ::last-updated-at]
           :opt [::uri
                 ::error]))
+
+;; Upload Link
+(s/def ::upload-link
+  (s/keys :req [::id
+                :kixi.datastore.filestore/id
+                ::created-at
+                ::uri]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Commands

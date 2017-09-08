@@ -123,6 +123,12 @@
             (success s r headers)
             (fail s))))
 
+      (GET "/upload/:id" req
+        :summary "Return details of an upload request"
+        :path-params [id :- ::s/id]
+        :return ::s/result
+        (ok "hello"))
+
       (GET "/:id" req
         :summary "Return details of a specific file"
         :path-params [id :- ::s/id]
