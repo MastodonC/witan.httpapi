@@ -4,9 +4,12 @@
             [clojure.spec.alpha :as s]
             [com.gfredericks.schpec :as sh]
             [kixi.comms :as comms]
-            [witan.httpapi.components.database :as database]))
+            [witan.httpapi.components.database :as database]
+            [witan.httpapi.spec :as spec]))
 
 (sh/alias 'command 'kixi.command)
+
+(def receipts-table "receipts")
 
 (defn send-valid-command!*
   "Eventually deprecate this function for comms/send-valid-command!"
@@ -35,6 +38,14 @@
                          {:kixi.comms.command/partition-key partition-key
                           :kixi.comms.command/id id})))
 
+(defn save-receipt! [database user receipt]
+  (let [spec-receipt {::spec/id receipt
+                      :kixi.user/id (:kixi.user/id user)
+                      ::spec/status "pending"
+                      ::spec/created-at (comms/timestamp)
+                      ::spec/last-updated-at (comms/timestamp)}]
+    (database/put-item database receipts-table spec-receipt nil)))
+
 (defn new-receipt
   []
   (let [receipt (comms/uuid)
@@ -45,6 +56,7 @@
 (defn create-file-upload!
   [{:keys [comms database]} user]
   (let [{:keys [receipt location]} (new-receipt)]
+    (save-receipt! database receipt)
     (send-valid-command!* comms {::command/id receipt
                                  ::command/type :kixi.datastore.filestore/create-upload-link
                                  ::command/version "1.0.0"

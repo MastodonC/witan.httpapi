@@ -1,8 +1,6 @@
 (ns witan.httpapi.queries
   (:require [witan.httpapi.components.requests :as requests]))
 
-(def receipts-table "receipts")
-
 (defn encode-kw
   [kw]
   (str (namespace kw)

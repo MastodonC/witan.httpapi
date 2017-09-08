@@ -153,7 +153,18 @@
 (s/def ::paged-items (s/keys :req-un [::items ::paging]))
 
 ;; Receipts
-(s/def ::receipt (api-spec uuid? "string"))
+(s/def ::status spec/string?)
+(s/def ::created-at timestamp?)
+(s/def ::last-updated-at timestamp?)
+(s/def ::uri spec/string?)
+(s/def ::receipt
+  (s/keys :req [::id
+                :kixi.user/id
+                ::status
+                ::created-at
+                ::last-updated-at]
+          :opt [::uri
+                ::error]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Commands

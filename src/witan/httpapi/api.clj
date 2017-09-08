@@ -96,7 +96,7 @@
 
     (GET "/receipts/:receipt" req
       :summary "Returns any results associated with the specified receipt"
-      :path-params [receipt :- ::s/receipt]
+      :path-params [receipt :- ::s/id]
       :return ::s/result
       (let [[s _ headers] (activities/check-receipt (activities req) (user req) receipt)]
         (if (success? s)
@@ -115,7 +115,7 @@
 
       (POST "/upload" req
         :summary "Creates an upload address for a new file"
-        :return ::s/receipt
+        :return ::s/id
         (let [[s r headers] (activities/create-file-upload!
                              (activities req)
                              (user req))]

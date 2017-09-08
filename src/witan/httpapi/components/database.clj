@@ -8,6 +8,18 @@
 
 (def app "witan.httpapi")
 
+(def db-keyword-delimiter "__")
+
+(defn db->keywordns [kw] (keyword (clojure.string/replace-first kw db-keyword-delimiter "/")))
+
+(defn keywordns->db [kw] (str (namespace kw) db-keyword-delimiter (name kw)))
+
+(defn convert-keywords-from-db [m]
+  (reduce-kv (fn [a k v] (assoc a (db->keywordns k) v)) {} m))
+
+(defn convert-keywords-for-db [m]
+  (reduce-kv (fn [a k v] (assoc a (keywordns->db k) v)) {} m))
+
 (defn decorated-table
   [table prefix]
   (keyword (clojure.string/join "-" [prefix app table])))
