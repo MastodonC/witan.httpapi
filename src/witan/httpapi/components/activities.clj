@@ -3,7 +3,8 @@
             [taoensso.timbre            :as log]
             [clojure.spec.alpha :as s]
             [com.gfredericks.schpec :as sh]
-            [kixi.comms :as comms]))
+            [kixi.comms :as comms]
+            [witan.httpapi.components.database :as database]))
 
 (sh/alias 'command 'kixi.command)
 
@@ -42,7 +43,7 @@
      :location location}))
 
 (defn create-file-upload!
-  [{:keys [comms]} user]
+  [{:keys [comms database]} user]
   (let [{:keys [receipt location]} (new-receipt)]
     (send-valid-command!* comms {::command/id receipt
                                  ::command/type :kixi.datastore.filestore/create-upload-link

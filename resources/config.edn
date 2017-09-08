@@ -33,8 +33,8 @@
 
  :dynamodb #profile {:development {:prefix "dev"
                                    :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}}
-                     :dev-docker {:prefix "dev"
-                                  :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}}
+                     :dev-staging {:prefix "dev"
+                                   :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}}
                      :test {:prefix "test"
                             :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}
                             :alerts false}

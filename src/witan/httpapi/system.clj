@@ -12,7 +12,8 @@
             [witan.httpapi.components.auth :as auth]
             [witan.httpapi.components.webserver :as webserver]
             [witan.httpapi.components.requests :as requests]
-            [witan.httpapi.components.activities :as activities]))
+            [witan.httpapi.components.activities :as activities]
+            [witan.httpapi.components.database :as database]))
 
 (defn new-requester
   [config]
@@ -25,6 +26,10 @@
 (defn new-authenticator
   [config]
   (auth/map->PubKeyAuthenticator (:auth config)))
+
+(defn new-database
+  [config profile]
+  (database/->DynamoDB (:dynamodb config) profile))
 
 (defn new-webserver
   [config]
@@ -57,10 +62,11 @@
      :requester (new-requester config)
      :activities (component/using
                   (new-activities)
-                  [:comms])
+                  [:comms :database])
      :auth (component/using
             (new-authenticator config)
             [:requester])
+     :database (new-database config profile)
      :webserver (component/using
                  (new-webserver config)
                  [:auth :requester :activities]))))

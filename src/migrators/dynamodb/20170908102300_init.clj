@@ -16,10 +16,6 @@
                      queries/receipts-table
                      [:id :s]
                      {:throughput {:read 1 :write 1}
-                      :gsindexes [#_{:name "refresh-tokens-by-user-id"
-                                     :hash-keydef [:user-id :s]
-                                     :range-keydef [:issued :n]
-                                     :throughput {:read 10 :write 10}}]
                       :block? true})))
 
 (defn down
