@@ -56,7 +56,7 @@
 (defn create-file-upload!
   [{:keys [comms database]} user]
   (let [{:keys [receipt location]} (new-receipt)]
-    (save-receipt! database receipt)
+    (save-receipt! database user receipt)
     (send-valid-command!* comms {::command/id receipt
                                  ::command/type :kixi.datastore.filestore/create-upload-link
                                  ::command/version "1.0.0"

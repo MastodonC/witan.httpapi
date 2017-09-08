@@ -2,7 +2,8 @@
   (:require [witan.httpapi.components.database :as db]
             [witan.httpapi.config :as config]
             [witan.httpapi.components.activities :as activities]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log]
+            [witan.httpapi.spec :as spec]))
 
 (defn get-db-config
   []
@@ -14,7 +15,7 @@
   (let [conn (db/new-session (get-db-config) @config/profile)]
     (db/create-table conn
                      activities/receipts-table
-                     [:id :s]
+                     [(db/keywordns->db ::spec/id) :s]
                      {:throughput {:read 1 :write 1}
                       :block? true})))
 

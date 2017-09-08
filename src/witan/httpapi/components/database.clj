@@ -76,7 +76,7 @@
   (put-item [this table record opts]
     (far/put-item (db this)
                   (decorated-table table (prefix this))
-                  record
+                  (convert-keywords-for-db record)
                   opts))
   (get-item [this table where opts]
     (far/get-item (db this)
