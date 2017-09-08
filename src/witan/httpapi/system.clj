@@ -1,13 +1,13 @@
 (ns witan.httpapi.system
   (:gen-class)
   (:require [com.stuartsierra.component :as component]
-            [aero.core :refer [read-config]]
             [kixi.log :as kixi-log]
             [kixi.comms :as comms]
             [kixi.comms.components.kinesis :as kinesis]
             [taoensso.timbre :as timbre]
             [signal.handler :refer [with-handler]]
             ;;
+            [witan.httpapi.config :as config]
             [witan.httpapi.api :as api]
             [witan.httpapi.components.auth :as auth]
             [witan.httpapi.components.webserver :as webserver]
@@ -38,7 +38,8 @@
 
 (defn new-system [profile]
   (timbre/debug "Profile" profile)
-  (let [config (read-config (clojure.java.io/resource "config.edn") {:profile profile})
+  (config/save-profile! profile)
+  (let [config (config/read-config)
         log-config (assoc (:log config)
                           :timestamp-opts kixi-log/default-timestamp-opts)]
     ;; logging config
