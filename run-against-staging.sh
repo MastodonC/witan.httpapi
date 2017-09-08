@@ -3,8 +3,8 @@
 STAGING_AUTH_PUBKEY=${1:?"Location of the public key used for user auth encryption, should be in keybase/witan/staging/"}
 STAGING_ACCESS_PEM=${2:?"Pem file for accessing staging"}
 
-DATASTORE_IP=$(curl "http://masters.staging.witan.mastodonc.net/marathon/v2/apps/kixi.datastore/tasks" 2> /dev/null | jq '.tasks[].host' | sort -R | head -n 1 | xargs echo)
-HEIMDALL_IP=$(curl "http://masters.staging.witan.mastodonc.net/marathon/v2/apps/kixi.heimdall/tasks" 2> /dev/null | jq '.tasks[].host' | sort -R | head -n 1 | xargs echo)
+DATASTORE_IP=$(curl "http://masters.staging.witan.mastodonc.net/marathon/v2/apps/kixi.datastore/tasks" 2> /dev/null | jq '.tasks[].host' | head -n 1 | xargs echo)
+HEIMDALL_IP=$(curl "http://masters.staging.witan.mastodonc.net/marathon/v2/apps/kixi.heimdall/tasks" 2> /dev/null | jq '.tasks[].host' | head -n 1 | xargs echo)
 
 echo "Adding datastore hosts line"
 sudo cp /etc/hosts .temp_hosts
