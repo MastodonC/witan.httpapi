@@ -11,7 +11,7 @@
             [aleph.http :as http]
             [cheshire.core :as json]))
 
-(def profile (keyword (env :system_profile "test")))
+(def profile (keyword (env :system-profile "test")))
 
 (defn start-system
   [all-tests]
