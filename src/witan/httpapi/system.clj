@@ -4,6 +4,7 @@
             [kixi.log :as kixi-log]
             [kixi.comms :as comms]
             [kixi.comms.components.kinesis :as kinesis]
+            [kixi.comms.components.coreasync :as coreasync]
             [taoensso.timbre :as timbre]
             [signal.handler :refer [with-handler]]
             ;;
@@ -37,7 +38,9 @@
 
 (defn new-comms
   [config]
-  (kinesis/map->Kinesis (get-in config [:comms :kinesis])))
+  (case ((comp first keys :comms) config)
+    :coreasync (coreasync/map->CoreAsync (get-in config [:comms :coreasync]))
+    :kinesis (kinesis/map->Kinesis (get-in config [:comms :kinesis]))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

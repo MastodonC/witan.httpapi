@@ -43,6 +43,17 @@
   `(is (spec/valid? ~spec ~r)
        (str (spec/explain-data ~spec ~r))))
 
+(defn get-auth-tokens
+  []
+  (let [[r s] (->result
+               (http/post (local-url "/api/login")
+                          (with-default-opts
+                            {:form-params
+                             {:username "test@mastodonc.com"
+                              :password "Secret123"}})))]
+    (is (= 201 s))
+    (:token-pair r)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (deftest healthcheck-test
@@ -78,3 +89,12 @@
                           :as :json}))]
     (is (= 200 s) "An error here could indicate a problem generating the swagger JSON")
     (is (= "2.0" (:swagger r)))))
+
+(deftest upload-file-test
+  (let [auth (get-auth-tokens)
+        resp @(http/post (local-url "/api/files/upload")
+                         {:throw-exceptions false
+                          :as :json
+                          :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}})]
+    (is (= 202 (:status resp)))
+    (prn resp)))

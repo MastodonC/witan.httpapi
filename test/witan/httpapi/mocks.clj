@@ -5,9 +5,15 @@
             [com.stuartsierra.component :as component]
             [taoensso.timbre :as log]))
 
+(defn uuid
+  []
+  (str (java.util.UUID/randomUUID)))
+
 (defrecord MockAuthenticator []
   auth/Authenticate
-  (authenticate [this time auth-token])
+  (authenticate [this time auth-token]
+    {:kixi.user/id (uuid)
+     :kixi.user/groups [(uuid)]})
   (login [this username password]
     (log/debug "Received login request for" username password)
     [201 {:token-pair {:auth-token "012"

@@ -120,7 +120,7 @@
                              (activities req)
                              (user req))]
           (if (success? s)
-            (success s r headers)
+            (success 202 r headers)
             (fail s))))
 
       (GET "/upload/:id" req
