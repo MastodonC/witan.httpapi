@@ -7,11 +7,14 @@
             [clj-time.core :as t]))
 
 (def sys (atom nil))
+
+(def profile (keyword (env :system-profile "test")))
+
 (defn start-system
   [all-tests]
   (reset! sys (component/start
                (with-redefs [sys/new-requester (fn [config] (mocks/->MockRequester))]
-                 (sys/new-system :test))))
+                 (sys/new-system profile))))
   (all-tests)
   (component/stop @sys)
   (reset! sys nil))
