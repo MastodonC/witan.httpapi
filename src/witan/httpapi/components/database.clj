@@ -117,7 +117,7 @@
           joplin-config {:migrators {:migrator "joplin/migrators/dynamodb"}                                        
                          :databases {:dynamodb (merge
                                                 {:type :dynamo
-                                                 :migration-table (str profile "-witan.httpapi.migrations")}
+                                                 :migration-table (decorated-table "migrations" (prefix component))}
                                                 client)}
                          :environments {:env [{:db :dynamodb :migrator :migrator}]}}]
       (log/info "About to migrate")
