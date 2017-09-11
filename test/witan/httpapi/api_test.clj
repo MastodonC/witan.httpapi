@@ -6,16 +6,19 @@
             [clojure.spec.alpha :as spec]
             [clojure.test :refer :all]
             [com.stuartsierra.component :as component]
+            [environ.core :refer [env]]
             [taoensso.timbre :as log]
             [aleph.http :as http]
             [cheshire.core :as json]))
+
+(def profile (:system_profile env "test"))
 
 (defn start-system
   [all-tests]
   (let [sys (atom (component/start
                    (with-redefs [sys/new-requester (fn [config] (mocks/->MockRequester))
                                  sys/new-authenticator (fn [config] (mocks/->MockAuthenticator))]
-                     (sys/new-system :test))))]
+                     (sys/new-system profile))))]
     (all-tests)
     (component/stop @sys)
     (reset! sys nil)))
