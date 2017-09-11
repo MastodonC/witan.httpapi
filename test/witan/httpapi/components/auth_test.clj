@@ -4,7 +4,8 @@
             [clojure.test :refer :all]
             [witan.httpapi.mocks :as mocks]
             [witan.httpapi.system :as sys]
-            [clj-time.core :as t]))
+            [clj-time.core :as t]
+            [environ.core :refer [env]]))
 
 (def sys (atom nil))
 
