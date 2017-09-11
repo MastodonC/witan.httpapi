@@ -112,7 +112,13 @@
   component/Lifecycle
   (start [component]
     (log/info "Starting dynamodb component ...")
-    (let [joplin-config (jrepl/load-config (io/resource "joplin.edn"))]
+    (let [joplin-config (jrepl/load-config (io/resource "joplin.edn"))
+          joplin-conf {:migrators {:migrator "joplin/migrators/dynamodb"}                                        
+                       :databases {:dynamodb (merge
+                                              {:type :dynamo
+                                               :migration-table (str profile "-witan.httpapi.migrations")}
+                                              client)}
+                       :environments {:env [{:db :dynamodb :migrator :migrator}]}}]
       (log/info "About to migrate")
       (->> profile
            (migrate joplin-config)
