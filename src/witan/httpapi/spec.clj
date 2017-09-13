@@ -89,7 +89,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Specs
 
-(s/def ::result (s/keys))
 (s/def ::id (api-spec uuid? "string"))
 (s/def ::error spec/string?)
 
@@ -177,6 +176,10 @@
   (s/keys :req [::id
                 :kixi.datastore.filestore/id
                 ::created-at
+                ::uri]))
+
+(s/def ::upload-link-response
+  (s/keys :req [:kixi.datastore.filestore/id
                 ::uri]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

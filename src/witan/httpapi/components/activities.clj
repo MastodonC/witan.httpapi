@@ -38,6 +38,7 @@
       (throw (ex-info "Invalid command" (s/explain-data :kixi/command cmd-with-id))))
     (when-not (s/valid? ::command/options opts)
       (throw (ex-info "Invalid command options" (s/explain-data ::command/options opts))))
+    (log/debug "Sending command" type version)
     (comms/send-command! comms type version user (dissoc cmd-with-id
                                                          ::command/id
                                                          ::command/type
@@ -65,7 +66,6 @@
 
 (defn get-receipt-response
   [act user id]
-  ;;
   (let [receipt (retreive-receipt (:database act) id)]
     (cond
       (nil? receipt)                                      [404 nil nil]
@@ -115,9 +115,9 @@
   [act user id]
   (let [row (retreive-upload-link (:database act) id)]
     (cond
-      (nil? row)                                          [404 nil nil]
+      (nil? row)                                      [404 nil nil]
       (not= (:kixi.user/id row) (:kixi.user/id user)) [401 nil nil]
-      :else [200 {:upload-link (::spec/uri row)} nil])))
+      :else [200 (select-keys row [::spec/uri :kixi.datastore.filestore/id]) nil])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events

@@ -1,5 +1,5 @@
 (ns witan.httpapi.api
-  (:require [compojure.api.sweet :refer [context GET POST resource api]]
+  (:require [compojure.api.sweet :refer [context GET POST ANY resource api]]
             [ring.util.http-response :refer [ok unauthorized]]
             [clj-time.core              :as t]
             [taoensso.timbre :as log]
@@ -50,6 +50,12 @@
   (and (>= status 200)
        (< status 400)))
 
+(def not-found
+  (context "/" []
+    (ANY "/*" []
+      {:status 404
+       :body "Not Found"})))
+
 (def healthcheck-routes
   (context "/" []
     (GET "/healthcheck" []
@@ -97,7 +103,6 @@
     (GET "/receipts/:receipt" req
       :summary "Returns any results associated with the specified receipt"
       :path-params [receipt :- ::s/id]
-      :return ::s/result
       (let [[s _ headers] (activities/get-receipt-response (activities req) (user req) receipt)]
         (if (success? s)
           (success s nil headers)
@@ -126,7 +131,7 @@
       (GET "/upload/:id" req
         :summary "Return details of an upload request"
         :path-params [id :- ::s/id]
-        :return ::s/result
+        :return ::s/upload-link-response
         (let [[s r headers] (activities/get-upload-link-response
                              (activities req)
                              (user req)
@@ -156,42 +161,41 @@
       (POST "/:id/metadata" req
         :summary "Update metadata for a specific file"
         :path-params [id :- ::s/id]
-        :return ::s/result
+        ;;:return ::s/result
         (ok "hello"))
 
       (GET "/:id/error" req
         :summary "Return errors for a specific file"
         :path-params [id :- ::s/id]
-        :return ::s/result
-        (ok "hello"))
+        ;;:return ::s/result        (ok "hello"))
 
-      (GET "/:id/sharing" req
-        :summary "Return sharing data for a specific file"
-        :path-params [id :- ::s/id]
-        :return ::s/file-sharing
-        (let [[s r] (query/get-file-sharing-info (requester req) (:user req) id)]
-          (if (success? s)
-            (success s r)
-            (fail s))))
+        (GET "/:id/sharing" req
+          :summary "Return sharing data for a specific file"
+          :path-params [id :- ::s/id]
+          :return ::s/file-sharing
+          (let [[s r] (query/get-file-sharing-info (requester req) (:user req) id)]
+            (if (success? s)
+              (success s r)
+              (fail s))))
 
-      (POST "/:id/sharing" req
-        :summary "Update sharing data for a specific file"
-        :path-params [id :- ::s/id]
-        :return ::s/result
-        (ok "hello"))
+        (POST "/:id/sharing" req
+          :summary "Update sharing data for a specific file"
+          :path-params [id :- ::s/id]
+          ;;:return ::s/result
+          (ok "hello"))
 
-      (POST "/:id/link" req
-        :summary "Creates a download token for a specific file"
-        :path-params [id :- ::s/id]
-        :return ::s/result
-        (ok "hello"))
+        (POST "/:id/link" req
+          :summary "Creates a download token for a specific file"
+          :path-params [id :- ::s/id]
+          ;;:return ::s/result
+          (ok "hello"))
 
-      (GET "/:id/link/:link-id" req
-        :summary "Return a download address for a specific file and token"
-        :path-params [id :- ::s/id
-                      link-id :- ::s/id]
-        :return ::s/result
-        (ok "hello")))))
+        (GET "/:id/link/:link-id" req
+          :summary "Return a download address for a specific file and token"
+          :path-params [id :- ::s/id
+                        link-id :- ::s/id]
+          ;;:return ::s/result
+          (ok "hello"))))))
 
 (def handler
   (api
@@ -203,4 +207,5 @@
             :tags [{:name "api", :description "API routes for Witan"}]}}}
    healthcheck-routes
    auth-routes
-   api-routes))
+   api-routes
+   not-found))

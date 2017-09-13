@@ -45,14 +45,16 @@
 
 (deftest get-upload-link-response-test
   (let [user (random-user)
-        id (uuid)]
+        id (uuid)
+        fid (uuid)]
     (let [[s _ _] (get-upload-link-response (activities) user (uuid))]
       (is (= 404 s))) ;; not yet created
     ;;
-    (create-upload-link! (:database (activities)) user id (uuid) "/foo/bar")
+    (create-upload-link! (:database (activities)) user id fid "/foo/bar")
     (let [[s b _] (get-upload-link-response (activities) user id)]
       (is (= 200 s))
-      (is (= "/foo/bar" (:upload-link b)))) ;; still pending
+      (is (= "/foo/bar" (::spec/uri b)))
+      (is (= fid (:kixi.datastore.filestore/id b)))) ;; still pending
     ;;
     (let [[s _ _] (get-upload-link-response (activities) (assoc user :kixi.user/id (uuid)) id)]
       (is (= 401 s)))))
