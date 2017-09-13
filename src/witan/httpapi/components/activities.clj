@@ -13,10 +13,13 @@
 (def upload-links-table "upload-links")
 
 (defmethod database/table-spec
-  receipts-table [_] ::spec/receipt)
+  [:put receipts-table] [& _] ::spec/receipt)
 
 (defmethod database/table-spec
-  upload-links-table [_] ::spec/upload-link)
+  [:update receipts-table] [& _] ::spec/receipt-update)
+
+(defmethod database/table-spec
+  [:put upload-links-table] [& _] ::spec/upload-link)
 
 (defn send-valid-command!*
   "Eventually deprecate this function for comms/send-valid-command!"
@@ -45,15 +48,42 @@
                          {:kixi.comms.command/partition-key partition-key
                           :kixi.comms.command/id id})))
 
-(defn save-receipt! [database user receipt]
-  (let [spec-receipt {::spec/id receipt
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Receipts
+
+(defn create-receipt! [database user id]
+  (let [spec-receipt {::spec/id id
                       :kixi.user/id (:kixi.user/id user)
                       ::spec/status "pending"
                       ::spec/created-at (comms/timestamp)
                       ::spec/last-updated-at (comms/timestamp)}]
-    (database/put-item database receipts-table spec-receipt nil)))
+    (database/put-item database receipts-table spec-receipt nil)    ))
 
-(defn save-upload-link! [database user id file-id upload-link]
+(defn retreive-receipt
+  [db id]
+  (database/get-item db receipts-table {::spec/id id} nil))
+
+(defn get-receipt-response
+  [act user id]
+  ;;
+  (let [receipt (retreive-receipt (:database act) id)]
+    (cond
+      (nil? receipt)                                      [404 nil nil]
+      (not= (:kixi.user/id receipt) (:kixi.user/id user)) [401 nil nil]
+      (= "pending" (::spec/status receipt))               [202 nil nil]
+      :else [303 nil {"Location" (::spec/uri receipt)}])))
+
+(defn complete-receipt!
+  [db id uri]
+  (database/update-item
+   db
+   receipts-table
+   {::spec/id id}
+   {::spec/uri uri
+    ::spec/status "complete"}
+   nil))
+
+(defn create-upload-link! [database user id file-id upload-link]
   (let [spec-upload-link {::spec/id id
                           :kixi.user/id (:kixi.user/id user)
                           :kixi.datastore.filestore/id file-id
@@ -61,43 +91,40 @@
                           ::spec/uri upload-link}]
     (database/put-item database upload-links-table spec-upload-link nil)))
 
-(defn new-receipt
-  []
-  (let [receipt (comms/uuid)
-        location (str "/receipts/" receipt)]
-    {:receipt receipt
-     :location location}))
-
-(defn check-receipt
-  [act user receipt]
-  (let [redirect "http://www.google.com"]
-    [303
-     nil
-     {"Location" redirect}]))
-
-(defn retreive-receipt
-  [db receipt]
-  (database/get-item db receipts-table {::spec/id receipt} nil))
-
-(defn complete-receipt!
-  [db id uri])
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Uploads
 
 (defn create-file-upload!
   [{:keys [comms database]} user]
-  (let [{:keys [receipt location]} (new-receipt)]
-    (send-valid-command!* comms {::command/id receipt
+  (let [id (comms/uuid)]
+    (create-receipt! database user id)
+    (send-valid-command!* comms {::command/id id
                                  ::command/type :kixi.datastore.filestore/create-upload-link
                                  ::command/version "1.0.0"
                                  :kixi/user user}
-                          {:partition-key receipt})
-    (save-receipt! database user receipt)
+                          {:partition-key id})
     [202
-     {:receipt receipt}
-     {"Location" location}]))
+     {:receipt id}
+     {"Location" (str "/receipts/" id)}]))
+
+(defn retreive-upload-link
+  [db id]
+  (database/get-item db upload-links-table {::spec/id id} nil))
+
+(defn get-upload-link-response
+  [act user id]
+  (let [row (retreive-upload-link (:database act) id)]
+    (cond
+      (nil? row)                                          [404 nil nil]
+      (not= (:kixi.user/id row) (:kixi.user/id user)) [401 nil nil]
+      :else [200 {:upload-link (::spec/uri row)} nil])))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Events
 
 (defmulti on-event
   (fn [_ {:keys [kixi.comms.event/key
-               kixi.comms.event/version]}] [key version]))
+                 kixi.comms.event/version]}] [key version]))
 
 (defmethod on-event
   [:kixi.datastore.filestore/upload-link-created "1.0.0"]
@@ -106,14 +133,15 @@
     (when-let [receipt (retreive-receipt db command-id)]
       (let [{:keys [kixi.datastore.filestore/upload-link
                     kixi.datastore.filestore/id]} payload]
-        (save-upload-link! db
-                           (select-keys payload [:kixi.user/id])
-                           command-id
-                           id
-                           upload-link)
-        (complete-receipt! db command-id (str "/files/upload/" command-id)))))
+        (create-upload-link! db
+                             (select-keys payload [:kixi.user/id])
+                             command-id
+                             id
+                             upload-link)
+        (complete-receipt! db command-id (str "/api/files/upload/" command-id)))))
   nil)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 
 (defrecord Activities []

@@ -98,7 +98,7 @@
       :summary "Returns any results associated with the specified receipt"
       :path-params [receipt :- ::s/id]
       :return ::s/result
-      (let [[s _ headers] (activities/check-receipt (activities req) (user req) receipt)]
+      (let [[s _ headers] (activities/get-receipt-response (activities req) (user req) receipt)]
         (if (success? s)
           (success s nil headers)
           (fail s))))
@@ -127,7 +127,13 @@
         :summary "Return details of an upload request"
         :path-params [id :- ::s/id]
         :return ::s/result
-        (ok "hello"))
+        (let [[s r headers] (activities/get-upload-link-response
+                             (activities req)
+                             (user req)
+                             id)]
+          (if (success? s)
+            (success s r headers)
+            (fail s))))
 
       (GET "/:id" req
         :summary "Return details of a specific file"

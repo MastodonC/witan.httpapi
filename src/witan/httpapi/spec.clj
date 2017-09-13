@@ -154,7 +154,7 @@
 (s/def ::paged-items (s/keys :req-un [::items ::paging]))
 
 ;; Receipts
-(s/def ::status spec/string?)
+(s/def ::status #{"pending" "complete" "error"})
 (s/def ::created-at timestamp?)
 (s/def ::last-updated-at timestamp?)
 (s/def ::uri spec/string?)
@@ -166,6 +166,11 @@
                 ::last-updated-at]
           :opt [::uri
                 ::error]))
+
+(s/def ::receipt-update
+  (s/keys :req [(or ::uri ::error)
+                ::status
+                ::last-updated-at]))
 
 ;; Upload Link
 (s/def ::upload-link
