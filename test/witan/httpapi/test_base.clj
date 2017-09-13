@@ -1,7 +1,6 @@
 (ns witan.httpapi.test-base
   (:require  [clojure.test :as t]
              [witan.httpapi.system :as sys]
-             [witan.httpapi.mocks :as mocks]
              [com.stuartsierra.component :as component]
              [environ.core :refer [env]]))
 
