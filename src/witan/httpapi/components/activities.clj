@@ -119,6 +119,19 @@
       (not= (:kixi.user/id row) (:kixi.user/id user)) [401 nil nil]
       :else [200 (select-keys row [::spec/uri :kixi.datastore.filestore/id]) nil])))
 
+(defn create-meta-data
+  [{:keys [comms database]} user]
+  (let [id (comms/uuid)]
+    (create-receipt! database user id)
+    (send-valid-command!* comms {::command/id id
+                                 ::command/type :kixi.datastore.filestore/create-upload-link
+                                 ::command/version "1.0.0"
+                                 :kixi/user user}
+                          {:partition-key id})
+    [202
+     {:receipt id}
+     {"Location" (str "/receipts/" id)}]))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
 
