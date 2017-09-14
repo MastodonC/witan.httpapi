@@ -119,7 +119,30 @@
       (not= (:kixi.user/id row) (:kixi.user/id user)) [401 nil nil]
       :else [200 (select-keys row [::spec/uri :kixi.datastore.filestore/id]) nil])))
 
-(defn create-meta-data
+(defn create-meta-data!
+  [{:keys [comms database]} user payload file-id]
+  (let [id (comms/uuid)
+        payload' (assoc payload :kixi.datastore.metadatastore/id file-id
+                        :kixi.datastore.metadatastore/type "stored"
+                        :kixi.datastore.metadatastore/provenance {:kixi.datastore.metadatastore/source "upload"
+                                                                  :kixi.datastore.metadatastore/created (comms/timestamp)
+                                                                  :kixi.user/id (:kixi.user/id user)}
+                        :kixi.datastore.metadatastore/sharing {:kixi.datastore.metadatastore/meta-read #{(:kixi.user/self-group user)}
+                                                               :kixi.datastore.metadatastore/meta-update #{(:kixi.user/self-group user)}
+                                                               :kixi.datastore.metadatastore/file-read #{(:kixi.user/self-group user)}})]
+
+    (create-receipt! database user id)
+    (send-valid-command!* comms (merge {::command/id id
+                                        ::command/type :kixi.datastore.filestore/create-file-metadata
+                                        ::command/version "1.0.0"
+                                        :kixi/user user}
+                                       payload')
+                          {:partition-key file-id})
+    [202
+     {:receipt id}
+     {"Location" (str "/receipts/" id)}]))
+
+(defn update-meta-data!
   [{:keys [comms database]} user]
   (let [id (comms/uuid)]
     (create-receipt! database user id)
@@ -154,6 +177,14 @@
         (complete-receipt! db command-id (str "/api/files/upload/" command-id)))))
   nil)
 
+(defmethod on-event
+  [:kixi.datastore.file-metadata/rejected "1.0.0"]
+  [db {:keys [kixi.comms.event/payload] :as event}]
+  (let [command-id (:kixi.comms.command/id event)]
+    (when-let [receipt (retreive-receipt db command-id)]
+      (complete-receipt! db command-id (str "/api/files/" (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/id]) "/errors/" command-id))))
+  nil)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 
@@ -165,6 +196,12 @@
                 comms
                 :witan-httpapi-activity-upload-file
                 :kixi.datastore.filestore/upload-link-created
+                "1.0.0"
+                (partial on-event database))
+               (comms/attach-event-handler!
+                comms
+                :witan-httpapi-activity-file-metadata-rejected
+                :kixi.datastore.file-metadata/rejected
                 "1.0.0"
                 (partial on-event database))]]
       (assoc component :ehs ehs)))

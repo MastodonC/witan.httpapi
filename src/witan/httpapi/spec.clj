@@ -109,7 +109,7 @@
 (s/def :kixi.datastore.metadatastore/file-read (s/coll-of spec/string?))
 
 ;; Metadata
-(s/def :kixi.datastore.metadatastore/size-bytes (api-spec bigint? "integer"))
+(s/def :kixi.datastore.metadatastore/size-bytes (api-spec int? "integer"))
 (s/def :kixi.datastore.metadatastore/file-type spec/string?)
 (s/def :kixi.datastore.metadatastore/header spec/boolean?)
 (s/def :kixi.datastore.metadatastore/name spec/string?)
@@ -137,6 +137,13 @@
                 :kixi.datastore.metadatastore/description
                 :kixi.datastore.metadatastore/provenance]))
 
+(s/def ::file-metadata-put
+  (s/keys :req [:kixi.datastore.metadatastore/size-bytes
+                :kixi.datastore.metadatastore/file-type
+                :kixi.datastore.metadatastore/header
+                :kixi.datastore.metadatastore/name
+                :kixi.datastore.metadatastore/description]))
+
 (s/def ::file-sharing
   (s/keys :req [:kixi.datastore.metadatastore/sharing]))
 
@@ -163,11 +170,10 @@
                 ::status
                 ::created-at
                 ::last-updated-at]
-          :opt [::uri
-                ::error]))
+          :opt [::uri]))
 
 (s/def ::receipt-update
-  (s/keys :req [(or ::uri ::error)
+  (s/keys :req [::uri
                 ::status
                 ::last-updated-at]))
 
@@ -189,3 +195,8 @@
   [:kixi.datastore.filestore/create-upload-link "1.0.0"]
   [_]
   (s/keys))
+
+(defmethod comms/command-payload
+  [:kixi.datastore.filestore/create-file-metadata "1.0.0"]
+  [_]
+  ::file-info)
