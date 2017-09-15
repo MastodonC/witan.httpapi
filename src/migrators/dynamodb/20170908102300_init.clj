@@ -22,6 +22,13 @@
                      activities/upload-links-table
                      [(db/keywordns->db ::spec/id) :s]
                      {:throughput {:read 1 :write 1}
+                      :block? true})
+
+    (db/create-table conn
+                     activities/file-errors-table
+                     [(db/keywordns->db ::spec/id) :s
+                      (db/keywordns->db :kixi.metadatastore.filestore/id) :s]
+                     {:throughput {:read 1 :write 1}
                       :block? true})))
 
 (defn down

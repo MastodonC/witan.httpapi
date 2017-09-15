@@ -90,7 +90,7 @@
   (fn [req]
     (let [auth-header (get-in req [:headers "authorization"])]
       (if-let [user (auth/authenticate (auth req) (t/now) auth-header)]
-        (do (log/debug ">>>>>>>>>>>>" user) (handler (assoc req :user user)))
+        (handler (assoc req :user user))
         (unauthorized)))))
 
 (def api-routes
