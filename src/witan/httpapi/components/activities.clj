@@ -217,6 +217,15 @@
         (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id)))))
   nil)
 
+(defmethod on-event
+  [:kixi.datastore.file/created "1.0.0"]
+  [db {:keys [kixi.comms.event/payload] :as event}]
+  (let [command-id (:kixi.comms.command/id event)]
+    (when-let [receipt (retreive-receipt db command-id)]
+      (let [file-id (:kixi.datastore.metadatastore/id payload)]
+        (complete-receipt! db command-id (str "/api/files/" file-id "/metadata")))))
+  nil)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 
@@ -234,6 +243,12 @@
                 comms
                 :witan-httpapi-activity-file-metadata-rejected
                 :kixi.datastore.file-metadata/rejected
+                "1.0.0"
+                (partial on-event database))
+               (comms/attach-event-handler!
+                comms
+                :witan-httpapi-activity-file-created
+                :kixi.datastore.file/created
                 "1.0.0"
                 (partial on-event database))]]
       (assoc component :ehs ehs)))

@@ -1,7 +1,8 @@
 (ns witan.httpapi.components.requests
   (:require [com.stuartsierra.component :as component]
             [taoensso.timbre            :as log]
-            [aleph.http :as http]))
+            [aleph.http :as http]
+            [aleph.http.client-middleware :refer [parse-transit]]))
 
 (defprotocol Request
   (GET [this service route opts])
@@ -14,8 +15,8 @@
 (defn add-default-opts
   [opts]
   (merge {:content-type :transit+json
-          :as :transit+json
-          :accept :transit+json}
+          :accept :transit+json
+          :throw-exceptions false}
          opts))
 
 (defrecord HttpRequester [directory]
@@ -23,7 +24,8 @@
   (GET [this service route opts]
     (let [full-route (build-route (get directory service) route)]
       (log/debug "GET request sent to" service full-route)
-      (let [{:keys [body status]} @(http/get full-route (add-default-opts opts))]
+      (let [{:keys [body status]} @(http/get full-route (add-default-opts opts))
+            body (if body (parse-transit body :json {}) body)]
         [status body])))
   (POST [this service route opts]
     (let [full-route (build-route (get directory service) route)]
