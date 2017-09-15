@@ -23,16 +23,19 @@
                      [(db/keywordns->db ::spec/id) :s]
                      {:throughput {:read 1 :write 1}
                       :block? true})
-
     (db/create-table conn
                      activities/file-errors-table
-                     [(db/keywordns->db ::spec/id) :s
-                      (db/keywordns->db :kixi.metadatastore.filestore/id) :s]
+                     [(db/keywordns->db ::spec/id) :s]
                      {:throughput {:read 1 :write 1}
+                      :gsindexes [{:name "errors-by-file"
+                                   :hash-keydef [(db/keywordns->db :kixi.metadatastore.filestore/id) :s]
+                                   :projection :all
+                                   :throughput {:read 10 :write 10}}]
                       :block? true})))
 
 (defn down
   [db]
   (let [conn (db/new-session (get-db-config) @config/profile)]
     (db/delete-table conn activities/receipts-table)
-    (db/delete-table conn activities/upload-links-table)))
+    (db/delete-table conn activities/upload-links-table)
+    (db/delete-table conn activities/file-errors-table)))

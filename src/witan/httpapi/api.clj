@@ -174,11 +174,19 @@
             (success 202 r headers)
             (fail s))))
 
-      (GET "/:id/error" req
-        :summary "Return errors for a specific file"
-        :path-params [id :- ::s/id]
-        ;;:return ::s/result
-        (ok "hello"))
+      (GET "/:id/errors/:error-id" req
+        :summary "Return specific error for a specific file"
+        :path-params [id :- ::s/id
+                      error-id :- ::s/id]
+        :return ::s/error-container
+        (let [[s r] (activities/get-error-response
+                     (activities req)
+                     (user req)
+                     id
+                     error-id)]
+          (if (success? s)
+            (success s r)
+            (fail s))))
 
       (GET "/:id/sharing" req
         :summary "Return sharing data for a specific file"

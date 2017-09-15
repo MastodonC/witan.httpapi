@@ -45,14 +45,6 @@
 
 (def uuid? (s/conformer -uuid? identity))
 
-(defn -bigint?
-  [x]
-  (if (instance? clojure.lang.BigInt x)
-    x
-    ::s/invalid))
-
-(def bigint? (s/conformer -bigint? identity))
-
 (def format :basic-date-time)
 (def date-format :basic-date)
 
@@ -81,6 +73,17 @@
 
 (def timestamp? (s/conformer -timestamp? identity))
 
+(defn -varint?
+  [x]
+  (cond
+    (int? x) x
+    (instance? clojure.lang.BigInt x) x
+    :else ::s/invalid))
+
+(def varint?
+  "big or small int"
+  (s/conformer -varint? identity))
+
 (defn email?
   [s]
   (when-not (clojure.string/blank? s)
@@ -90,7 +93,6 @@
 ;; Specs
 
 (s/def ::id (api-spec uuid? "string"))
-(s/def ::error spec/string?)
 
 ;; Auth
 (s/def ::password spec/string?)
@@ -109,7 +111,7 @@
 (s/def :kixi.datastore.metadatastore/file-read (s/coll-of spec/string?))
 
 ;; Metadata
-(s/def :kixi.datastore.metadatastore/size-bytes (api-spec int? "integer"))
+(s/def :kixi.datastore.metadatastore/size-bytes (api-spec varint? "integer"))
 (s/def :kixi.datastore.metadatastore/file-type spec/string?)
 (s/def :kixi.datastore.metadatastore/header spec/boolean?)
 (s/def :kixi.datastore.metadatastore/name spec/string?)
@@ -187,6 +189,16 @@
 (s/def ::upload-link-response
   (s/keys :req [:kixi.datastore.filestore/id
                 ::uri]))
+
+;; Errors
+(s/def ::reason string?)
+(s/def ::error
+  (s/keys :req [::id
+                :kixi.datastore.filestore/id
+                ::created-at
+                ::reason]))
+(s/def ::error-container
+  (s/keys :req-un [::error]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Commands

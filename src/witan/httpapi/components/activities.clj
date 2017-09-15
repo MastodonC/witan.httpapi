@@ -11,6 +11,7 @@
 
 (def receipts-table "receipts")
 (def upload-links-table "upload-links")
+(def file-errors-table "file-errors")
 
 (defmethod database/table-spec
   [:put receipts-table] [& _] ::spec/receipt)
@@ -20,6 +21,9 @@
 
 (defmethod database/table-spec
   [:put upload-links-table] [& _] ::spec/upload-link)
+
+(defmethod database/table-spec
+  [:put file-errors-table] [& _] ::spec/error)
 
 (defn send-valid-command!*
   "Eventually deprecate this function for comms/send-valid-command!"
@@ -60,7 +64,7 @@
                       ::spec/last-updated-at (comms/timestamp)}]
     (database/put-item database receipts-table spec-receipt nil)    ))
 
-(defn retreive-receipt
+(defn- retreive-receipt
   [db id]
   (database/get-item db receipts-table {::spec/id id} nil))
 
@@ -83,6 +87,10 @@
     ::spec/status "complete"}
    nil))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Uploads
+
+
 (defn create-upload-link! [database user id file-id upload-link]
   (let [spec-upload-link {::spec/id id
                           :kixi.user/id (:kixi.user/id user)
@@ -90,9 +98,6 @@
                           ::spec/created-at (comms/timestamp)
                           ::spec/uri upload-link}]
     (database/put-item database upload-links-table spec-upload-link nil)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Uploads
 
 (defn create-file-upload!
   [{:keys [comms database]} user]
@@ -107,7 +112,7 @@
      {:receipt id}
      {"Location" (str "/receipts/" id)}]))
 
-(defn retreive-upload-link
+(defn- retreive-upload-link
   [db id]
   (database/get-item db upload-links-table {::spec/id id} nil))
 
@@ -118,6 +123,9 @@
       (nil? row)                                      [404 nil nil]
       (not= (:kixi.user/id row) (:kixi.user/id user)) [401 nil nil]
       :else [200 (select-keys row [::spec/uri :kixi.datastore.filestore/id]) nil])))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Metadata
 
 (defn create-meta-data!
   [{:keys [comms database]} user payload file-id]
@@ -156,6 +164,28 @@
      {"Location" (str "/receipts/" id)}]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Errors
+
+(defn create-error!
+  [database id file-id reason]
+  (let [spec-error {::spec/id id
+                    :kixi.datastore.filestore/id file-id
+                    ::spec/created-at (comms/timestamp)
+                    ::spec/reason reason}]
+    (database/put-item database file-errors-table spec-error nil)))
+
+(defn- retreive-error
+  [db id]
+  (database/get-item db file-errors-table {::spec/id id} nil))
+
+(defn get-error-response
+  [act user file-id error-id]
+  (let [row (retreive-error (:database act) error-id)]
+    (if (and row (= (:kixi.datastore.filestore/id row) file-id))
+      [200 {:error row}]
+      [404 nil])))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
 
 (defmulti on-event
@@ -182,7 +212,9 @@
   [db {:keys [kixi.comms.event/payload] :as event}]
   (let [command-id (:kixi.comms.command/id event)]
     (when-let [receipt (retreive-receipt db command-id)]
-      (complete-receipt! db command-id (str "/api/files/" (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/id]) "/errors/" command-id))))
+      (let [file-id (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/id])]
+        (create-error! db command-id file-id (-> payload :reason name))
+        (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id)))))
   nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
