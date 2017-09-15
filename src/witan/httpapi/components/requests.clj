@@ -20,12 +20,12 @@
           :throw-exceptions false}
          opts))
 
+;; We use this fn to avoid an exception thrown by Aleph
+;; A fix proposed here: https://github.com/ztellman/aleph/pull/331
 (defn parse-body
   [^java.io.ByteArrayInputStream body]
   (when (and body (pos? (.available body)))
-    (let [x (parse-transit body :json {})]
-      #_(log/debug "DECODED BODY" x)
-      x)))
+    (parse-transit body :json {})))
 
 (defrecord HttpRequester [directory]
   Request
