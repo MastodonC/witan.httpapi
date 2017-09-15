@@ -17,7 +17,7 @@
   [all-tests]
   (reset! sys (component/start
                (with-redefs [sys/new-requester (fn [config] (mocks/->MockRequester))
-                             sys/new-authenticator (fn [config] (mocks/->MockAuthenticator))]
+                             sys/new-authenticator (fn [config] (mocks/->MockAuthenticator nil nil))]
                  (sys/new-system profile))))
   (all-tests)
   (component/stop @sys)
@@ -66,9 +66,10 @@
     (let [[s _] (get-error-response (activities) user id fid)]
       (is (= 404 s))) ;; not yet created
     ;;
-    (create-error! (:database (activities)) user id fid "foobar")
+    (create-error! (:database (activities)) id fid "foobar")
     (let [[s b] (get-error-response (activities) user id fid)]
-      (is (= 200 s))
-      (is (= "foobar" (::spec/reason b)))
-      (is (= fid (:kixi.datastore.filestore/id b)))) ;; still pending
+      (is (= 200 s) id)
+      (when (= 200 s)
+        (is (= "foobar" (get-in b [:error ::spec/reason])))
+        (is (= fid (get-in b [:error :kixi.datastore.filestore/id]))))) ;; still pending
     ))

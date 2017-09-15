@@ -182,8 +182,8 @@
         (let [[s r] (activities/get-error-response
                      (activities req)
                      (user req)
-                     id
-                     error-id)]
+                     error-id
+                     id)]
           (if (success? s)
             (success s r)
             (fail s))))

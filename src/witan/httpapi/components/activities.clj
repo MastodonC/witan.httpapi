@@ -179,7 +179,7 @@
   (database/get-item db file-errors-table {::spec/id id} nil))
 
 (defn get-error-response
-  [act user file-id error-id]
+  [act user error-id file-id]
   (let [row (retreive-error (:database act) error-id)]
     (if (and row (= (:kixi.datastore.filestore/id row) file-id))
       [200 {:error row}]
