@@ -119,7 +119,7 @@
 (s/def :kixi.datastore.metadatastore/type spec/string?)
 (s/def :kixi.datastore.metadatastore/description spec/string?)
 (s/def :kixi.datastore.metadatastore/source spec/string?)
-(s/def :kixi.datastore.metadatastore/created timestamp?)
+(s/def :kixi.datastore.metadatastore/created (api-spec timestamp? "string"))
 
 (s/def :kixi.datastore.metadatastore/provenance (s/keys :req [:kixi.datastore.metadatastore/source
                                                               :kixi.datastore.metadatastore/created
@@ -163,7 +163,7 @@
 
 ;; Receipts
 (s/def ::status #{"pending" "complete" "error"})
-(s/def ::created-at timestamp?)
+(s/def ::created-at (api-spec timestamp? "string"))
 (s/def ::last-updated-at timestamp?)
 (s/def ::uri spec/string?)
 (s/def ::receipt
