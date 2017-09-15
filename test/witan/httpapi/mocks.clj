@@ -11,6 +11,7 @@
   auth/Authenticate
   (authenticate [this time auth-token]
     {:kixi.user/id (or user-id (uuid))
+     :kixi.user/self-group (or (and (not-empty groups) (first groups)) (uuid))
      :kixi.user/groups (or groups [(uuid)])})
   (login [this username password]
     (log/debug "Received login request for" username password)
@@ -59,15 +60,40 @@
     (let [chs [(comms/attach-command-handler! comms :mock-datastore-upload-link
                                               :kixi.datastore.filestore/create-upload-link
                                               "1.0.0"
-                                              (fn [e]
-                                                (let [cmd-id (:kixi.comms.command/id e)]
+                                              (fn [c]
+                                                (let [cmd-id (:kixi.comms.command/id c)]
                                                   {:kixi.comms.event/key :kixi.datastore.filestore/upload-link-created
                                                    :kixi.comms.event/version "1.0.0"
                                                    :kixi.comms.command/id cmd-id
                                                    :kixi.comms.event/payload
                                                    {:kixi.datastore.filestore/upload-link (str "/mocked-upload-link/" cmd-id)
                                                     :kixi.datastore.filestore/id (uuid)
-                                                    :kixi.user/id (get-in e [:kixi.comms.command/user :kixi.user/id])}})))]]
+                                                    :kixi.user/id (get-in c [:kixi.comms.command/user :kixi.user/id])}})))
+               (comms/attach-command-handler! comms :mock-datastore-file-metadata-create
+                                              :kixi.datastore.filestore/create-file-metadata
+                                              "1.0.0"
+                                              (fn [c]
+                                                (let [cmd-id (:kixi.comms.command/id c)
+                                                      file-id (get-in c [:kixi.comms.command/payload
+                                                                         :kixi.datastore.metadatastore/id])
+                                                      file-name (get-in c [:kixi.comms.command/payload
+                                                                           :kixi.datastore.metadatastore/name])]
+                                                  (if (= "fail" file-name)
+                                                    {:kixi.comms.event/key :kixi.datastore.file-metadata/rejected
+                                                     :kixi.comms.event/version "1.0.0"
+                                                     :kixi.comms.command/id cmd-id
+                                                     :kixi.comms.event/payload
+                                                     {:reason :mock-fail
+                                                      :kixi.datastore.metadatastore/file-metadata
+                                                      {:kixi.datastore.metadatastore/id file-id}}}
+                                                    ;;
+                                                    {:kixi.comms.event/key :kixi.datastore.filestore/upload-link-created
+                                                     :kixi.comms.event/version "1.0.0"
+                                                     :kixi.comms.command/id cmd-id
+                                                     :kixi.comms.event/payload
+                                                     {:kixi.datastore.filestore/upload-link (str "/mocked-upload-link/" cmd-id)
+                                                      :kixi.datastore.filestore/id (uuid)
+                                                      :kixi.user/id (get-in c [:kixi.comms.command/user :kixi.user/id])}}))))]]
       (assoc component :chs chs)))
 
   (stop [component]
