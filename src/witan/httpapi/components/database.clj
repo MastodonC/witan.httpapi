@@ -205,10 +205,11 @@
                                                 client)}
                          :environments {:env [{:db :dynamodb :migrator :migrator}]}}]
       (log/info "About to migrate" client)
-      (->> (migrate  joplin-config :env)
-           (with-out-str)
-           (clojure.string/split-lines)
-           (run! #(log/info "> JOPLIN:" %))))
+      (migrate  joplin-config :env)
+      #_(->>
+         (with-out-str)
+         (clojure.string/split-lines)
+         (run! #(log/info "> JOPLIN:" %))))
     (log/info "Migrated")
     (log/info "Started")
     component)
