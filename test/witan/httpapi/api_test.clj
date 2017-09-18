@@ -14,12 +14,20 @@
 
 (def user-id (uuid))
 
+(defn test-system
+  [sys-fn]
+  (with-redefs [sys/new-requester (fn [config] (mocks/->MockRequester))
+                sys/new-authenticator (fn [config] (mocks/->MockAuthenticator user-id nil))]
+    (sys-fn)))
+
 (defn start-system
   [all-tests]
-  (let [sys (atom (component/start
-                   (with-redefs [sys/new-requester (fn [config] (mocks/->MockRequester))
-                                 sys/new-authenticator (fn [config] (mocks/->MockAuthenticator user-id nil))]
-                     (sys/new-system profile))))
+  (let [mocks-fn (if (= :test profile)
+                   test-system
+                   std-system)
+        sys (atom (component/start
+                   (mocks-fn
+                    #(sys/new-system profile))))
         peripherals (atom (component/start
                            (component/system-map
                             :datastore (mocks/->MockDatastore (:comms @sys)))))]
@@ -109,7 +117,7 @@
     (is (= 200 s) "An error here could indicate a problem generating the swagger JSON")
     (is (= "2.0" (:swagger r)))))
 
-(deftest upload-file-test
+(deftest upload-file-1-2-test
   (let [auth (get-auth-tokens)
         resp @(http/post (local-url "/api/files/upload")
                          {:throw-exceptions false
