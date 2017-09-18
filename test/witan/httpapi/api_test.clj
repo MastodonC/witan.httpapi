@@ -130,7 +130,7 @@
               (log/debug "upload-file-test - ...got" (:status receipt-resp))
               (if (pos? tries)
                 (recur (dec tries))
-                (is false (str "upload-file-test - Never returned a 200: " url " - "receipt-resp))))
+                (is false (str "Never returned a 200: " url " - "receipt-resp))))
             (do
               (is (= 200 (:status receipt-resp)))
               (let [body (:body receipt-resp)
@@ -174,4 +174,4 @@
               (is (= 200 (:status receipt-resp)))
               (let [body (:body receipt-resp)
                     reason (get-in body [:error :witan.httpapi.spec/reason])]
-                (is (= "mock-fail"reason))))))))))
+                (is (= "mock-fail" reason))))))))))

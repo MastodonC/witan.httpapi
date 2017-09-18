@@ -40,4 +40,5 @@
 (deftest authenticate-test
   (let [r (auth/authenticate (auth) (t/date-time 0) test-auth-token)]
     (is (= #:kixi.user{:id "070b3710-22be-4d73-bfcf-dc61c23de781",
-                       :groups ["ddd38ea0-8b90-4c99-b2ef-54add621b1e2" "c0d5a98c-2011-4b7d-8cd3-b839c0734431"]} r))))
+                       :groups ["ddd38ea0-8b90-4c99-b2ef-54add621b1e2" "c0d5a98c-2011-4b7d-8cd3-b839c0734431"]
+                       :self-group "ddd38ea0-8b90-4c99-b2ef-54add621b1e2"} r))))
