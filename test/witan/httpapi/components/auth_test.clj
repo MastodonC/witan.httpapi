@@ -6,6 +6,7 @@
             [witan.httpapi.mocks :as mocks]
             [witan.httpapi.system :as sys]
             [clj-time.core :as t]
+            [taoensso.timbre :as log]
             [environ.core :refer [env]]))
 
 (def sys (atom nil))
@@ -20,6 +21,7 @@
   (let [mocks-fn (if (= :test profile)
                    std-system
                    test-system)]
+    (log/info "Testing with the profile:" profile)
     (reset! sys (component/start
                  (mocks-fn
                   #(sys/new-system profile))))
