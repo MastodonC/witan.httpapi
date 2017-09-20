@@ -33,18 +33,22 @@
 
 (use-fixtures :once start-system)
 
-(deftest login-test
-  (let [[s r] (auth/login (auth) "test@mastodonc.com" "Secret123")]
-    (is (contains? r :token-pair))
-    (is (contains? (:token-pair r) :auth-token))
-    (is (contains? (:token-pair r) :refresh-token))))
+(deftest login-and-refresh-test
+  (let [is-valid-response (fn [r]
+                            (is (contains? r :token-pair))
+                            (is (contains? (:token-pair r) :auth-token))
+                            (is (contains? (:token-pair r) :refresh-token)))
+        [s r] (auth/login (auth) "test@mastodonc.com" "Secret123")]
+    (is (= 201 s))
+    (is-valid-response r)
+    (when (is (contains? r :token-pair))
+      (let [[s r] (auth/refresh (auth) (:token-pair r))]
+        (is (= 201 s))
+        (is-valid-response r)))))
 
-(deftest refresh-test
-  (let [r (auth/refresh (auth) {})]
-    (is (= [:post :heimdall "/refresh-auth-token"] r))))
-
-#_(deftest authenticate-test
-    (let [r (auth/authenticate (auth) (t/date-time 0) test-auth-token)]
-      (is (= #:kixi.user{:id "070b3710-22be-4d73-bfcf-dc61c23de781",
-                         :groups ["ddd38ea0-8b90-4c99-b2ef-54add621b1e2" "c0d5a98c-2011-4b7d-8cd3-b839c0734431"]
-                         :self-group "ddd38ea0-8b90-4c99-b2ef-54add621b1e2"} r))))
+(deftest authenticate-test
+  (let [[s r] (auth/login (auth) "test@mastodonc.com" "Secret123")
+        r (auth/authenticate (auth) (t/date-time 0) (-> r :token-pair :auth-token))]
+    (is (contains? r :kixi.user/id))
+    (is (contains? r :kixi.user/self-group))
+    (is (and (contains? r :kixi.user/groups) (not-empty (:kixi.user/groups r))))))
