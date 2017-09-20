@@ -37,10 +37,6 @@
 
 (use-fixtures :once start-system)
 
-(defn local-url
-  [method]
-  (str "http://localhost:8015" method))
-
 (defn ->result
   [resp]
   ((juxt :body :status) @resp))
@@ -123,29 +119,14 @@
                          {:throw-exceptions false
                           :as :json
                           :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}})]
-    (is (= 202 (:status resp)))
-    (when-let [receipt-id (get-in resp [:body :receipt])]
-      (log/debug "upload-file-test - Got receipt ID" receipt-id)
-      (loop [tries 10]
-        (log/debug "upload-file-test - Checking receipt ..." tries)
-        (let [url (local-url (str "/api/receipts/" receipt-id))
-              receipt-resp @(http/get url
-                                      {:throw-exceptions false
-                                       :as :json
-                                       :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}})]
-          (if (not= 200 (:status receipt-resp))
-            (do
-              (log/debug "upload-file-test - ...got" (:status receipt-resp))
-              (if (pos? tries)
-                (recur (dec tries))
-                (is false (str "Never returned a 200: " url " - "receipt-resp))))
-            (do
-              (is (= 200 (:status receipt-resp)))
-              (let [body (:body receipt-resp)
-                    uri (:witan.httpapi.spec/uri body)
-                    file-id (:kixi.datastore.filestore/id body)]
-                (is uri)
-                (is file-id (prn-str body))))))))))
+    (when-accepted resp
+      (let [receipt-resp (wait-for-receipt auth resp)]
+        (is (= 200 (:status receipt-resp)))
+        (let [body (:body receipt-resp)
+              uri (:witan.httpapi.spec/uri body)
+              file-id (:kixi.datastore.filestore/id body)]
+          (is uri)
+          (is file-id (prn-str body)))))))
 
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"
