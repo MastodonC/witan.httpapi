@@ -16,8 +16,7 @@
 
 (defn test-system
   [sys-fn]
-  (with-redefs [sys/new-requester (fn [config] (mocks/->MockRequester))
-                sys/new-authenticator (fn [config] (mocks/->MockAuthenticator user-id nil))]
+  (with-redefs [sys/new-authenticator (fn [config] (mocks/->MockAuthenticator user-id [(uuid)]))]
     (sys-fn)))
 
 (defn start-system
@@ -27,13 +26,9 @@
                    std-system)
         sys (atom (component/start
                    (mocks-fn
-                    #(sys/new-system profile))))
-        peripherals (atom (component/start
-                           (component/system-map
-                            :datastore (mocks/->MockDatastore (:comms @sys)))))]
+                    #(sys/new-system profile))))]
     (all-tests)
-    (component/stop @sys)
-    (component/stop @peripherals)))
+    (component/stop @sys)))
 
 (use-fixtures :once start-system)
 
@@ -113,20 +108,11 @@
     (is (= 200 s) "An error here could indicate a problem generating the swagger JSON")
     (is (= "2.0" (:swagger r)))))
 
-(deftest upload-file-1-2-test
+(deftest retrieve-upload-link
   (let [auth (get-auth-tokens)
-        resp @(http/post (local-url "/api/files/upload")
-                         {:throw-exceptions false
-                          :as :json
-                          :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}})]
-    (when-accepted resp
-      (let [receipt-resp (wait-for-receipt auth resp)]
-        (is (= 200 (:status receipt-resp)))
-        (let [body (:body receipt-resp)
-              uri (:witan.httpapi.spec/uri body)
-              file-id (:kixi.datastore.filestore/id body)]
-          (is uri)
-          (is file-id (prn-str body)))))))
+        file-name  "./test-resources/metadata-one-valid.csv"
+        metadata (create-metadata user-id file-name)
+        retrieved-metadata (send-file-and-metadata auth file-name metadata)]))
 
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"

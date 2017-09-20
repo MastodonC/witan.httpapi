@@ -26,6 +26,7 @@
                  [metrics-clojure ~metrics-version  :exclusions [org.slf4j/slf4j-api]]
                  [metrics-clojure-jvm ~metrics-version :exclusions [org.slf4j/slf4j-api]]
                  [metrics-clojure-ring ~metrics-version :exclusions [org.slf4j/slf4j-api]]]
+
   :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.11"]]
                    :source-paths ["dev"]
                    :repl-options {:init-ns user}}

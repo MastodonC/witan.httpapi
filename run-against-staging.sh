@@ -3,8 +3,8 @@
 STAGING_AUTH_PUBKEY=${1:?"Location of the public key used for user auth encryption, should be in keybase/witan/staging/"}
 STAGING_ACCESS_PEM=${2:?"Pem file for accessing staging"}
 
-DATASTORE_IP=$(curl "http://masters.staging.witan.mastodonc.net/marathon/v2/apps/kixi.datastore/tasks" 2> /dev/null | jq '.tasks[].host' | head -n 1 | xargs echo)
-HEIMDALL_IP=$(curl "http://masters.staging.witan.mastodonc.net/marathon/v2/apps/kixi.heimdall/tasks" 2> /dev/null | jq '.tasks[].host' | head -n 1 | xargs echo)
+DATASTORE_IP=$(curl "http://masters.staging.witan.mastodonc.net/marathon/v2/apps/kixi.datastore/tasks" 2> /dev/null | jq '.tasks[].host' | sort -R | head -n 1 | xargs echo)
+HEIMDALL_IP=$(curl "http://masters.staging.witan.mastodonc.net/marathon/v2/apps/kixi.heimdall/tasks" 2> /dev/null | jq '.tasks[].host' | sort -R | head -n 1 | xargs echo)
 
 echo "Adding datastore hosts line"
 sudo cp /etc/hosts .temp_hosts
@@ -26,6 +26,6 @@ function cleanup {
 }
 trap cleanup EXIT
 echo "Creating resources/local.edn"
-echo "{:auth-pubkey \"$STAGING_AUTH_PUBKEY\"}" > resources/local.edn
-echo "You can now run witan.httpapi with the :dev-staging profile. Ctrl+C to exit..."
+echo "{:zk \"$(dig masters.staging.witan.mastodonc.net A +noall +answer | tail -n 1 | awk '{print $NF}')\" :auth-pubkey \"$STAGING_AUTH_PUBKEY\"}" > resources/local.edn
+echo "You can now run witan.gateway with the :dev-staging profile. Ctrl+C to exit..."
 while true; do sleep 2; done

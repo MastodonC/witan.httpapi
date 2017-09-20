@@ -10,9 +10,10 @@
 (defrecord MockAuthenticator [user-id groups]
   auth/Authenticate
   (authenticate [this time auth-token]
-    {:kixi.user/id (or user-id (uuid))
-     :kixi.user/self-group (or (and (not-empty groups) (first groups)) (uuid))
-     :kixi.user/groups (or groups [(uuid)])})
+    (let [self-group-id (uuid)]
+      {:kixi.user/id (or user-id (uuid))
+       :kixi.user/self-group (or (and (not-empty groups) (first groups)) self-group-id)
+       :kixi.user/groups (or groups [self-group-id])}))
   (login [this username password]
     (log/debug "Received login request for" username password)
     [201 {:token-pair {:auth-token "012"
@@ -53,6 +54,14 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(alias 'ke 'kixi.comms.event)
+(alias 'kc 'kixi.comms.command)
+(alias 'mdu 'kixi.datastore.metadatastore.update)
+(alias 'kdm 'kixi.datastore.metadatastore)
+(alias 'kdfm 'kixi.datastore.file-metadata)
+(alias 'cs 'kixi.datastore.communication-specs)
+
+
 (defrecord MockDatastore [comms]
   component/Lifecycle
   (start [component]
@@ -61,19 +70,21 @@
                                               :kixi.datastore.filestore/create-upload-link
                                               "1.0.0"
                                               (fn [c]
-                                                (let [cmd-id (:kixi.comms.command/id c)]
+                                                (let [cmd-id (:kixi.comms.command/id c)
+                                                      file-id (uuid)]
                                                   {:kixi.comms.event/key :kixi.datastore.filestore/upload-link-created
                                                    :kixi.comms.event/version "1.0.0"
                                                    :kixi.comms.command/id cmd-id
                                                    :kixi.comms.event/payload
-                                                   {:kixi.datastore.filestore/upload-link (str "/mocked-upload-link/" cmd-id)
-                                                    :kixi.datastore.filestore/id (uuid)
+                                                   {:kixi.datastore.filestore/upload-link (str "file:///tmp/" file-id)
+                                                    :kixi.datastore.filestore/id file-id
                                                     :kixi.user/id (get-in c [:kixi.comms.command/user :kixi.user/id])}})))
                (comms/attach-command-handler! comms :mock-datastore-file-metadata-create
                                               :kixi.datastore.filestore/create-file-metadata
                                               "1.0.0"
                                               (fn [c]
                                                 (let [cmd-id (:kixi.comms.command/id c)
+                                                      metadata (get-in c [:kixi.comms.command/payload])
                                                       file-id (get-in c [:kixi.comms.command/payload
                                                                          :kixi.datastore.metadatastore/id])
                                                       file-name (get-in c [:kixi.comms.command/payload
@@ -87,13 +98,16 @@
                                                       :kixi.datastore.metadatastore/file-metadata
                                                       {:kixi.datastore.metadatastore/id file-id}}}
                                                     ;;
-                                                    {:kixi.comms.event/key :kixi.datastore.filestore/upload-link-created
-                                                     :kixi.comms.event/version "1.0.0"
-                                                     :kixi.comms.command/id cmd-id
-                                                     :kixi.comms.event/payload
-                                                     {:kixi.datastore.filestore/upload-link (str "/mocked-upload-link/" cmd-id)
-                                                      :kixi.datastore.filestore/id (uuid)
-                                                      :kixi.user/id (get-in c [:kixi.comms.command/user :kixi.user/id])}}))))]]
+                                                    [{:kixi.comms.event/key :kixi.datastore.file/created
+                                                      :kixi.comms.event/version "1.0.0"
+                                                      :kixi.comms.command/id cmd-id
+                                                      :kixi.comms.event/payload metadata}
+                                                     {::ke/key ::kdfm/updated
+                                                      ::ke/version "1.0.0"
+                                                      ::ke/partition-key file-id
+                                                      ::ke/payload {::kdm/file-metadata metadata
+                                                                    ::cs/file-metadata-update-type
+                                                                    ::cs/file-metadata-created}}]))))]]
       (assoc component :chs chs)))
 
   (stop [component]

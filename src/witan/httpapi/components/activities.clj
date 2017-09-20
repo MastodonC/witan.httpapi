@@ -92,7 +92,7 @@
 
 
 (defn create-upload-link! [database user id file-id upload-link]
-  (let [spec-upload-link {::spec/id id
+  (let [spec-upload-link {::spec/id file-id
                           :kixi.user/id (:kixi.user/id user)
                           :kixi.datastore.filestore/id file-id
                           ::spec/created-at (comms/timestamp)
@@ -130,7 +130,8 @@
 (defn create-meta-data!
   [{:keys [comms database]} user payload file-id]
   (let [id (comms/uuid)
-        payload' (assoc payload :kixi.datastore.metadatastore/id file-id
+        payload' (assoc payload 
+                        :kixi.datastore.metadatastore/id file-id
                         :kixi.datastore.metadatastore/type "stored"
                         :kixi.datastore.metadatastore/provenance {:kixi.datastore.metadatastore/source "upload"
                                                                   :kixi.datastore.metadatastore/created (comms/timestamp)
@@ -204,7 +205,7 @@
                              command-id
                              id
                              upload-link)
-        (complete-receipt! db command-id (str "/api/files/upload/" command-id)))))
+        (complete-receipt! db command-id (str "/api/files/" id "/upload")))))
   nil)
 
 (defmethod on-event
@@ -213,7 +214,7 @@
   (let [command-id (:kixi.comms.command/id event)]
     (when-let [receipt (retreive-receipt db command-id)]
       (let [file-id (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/id])]
-        (create-error! db command-id file-id (-> payload :reason name))
+        (create-error! db command-id file-id (str (-> payload :reason name) " -- " payload))
         (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id)))))
   nil)
 
