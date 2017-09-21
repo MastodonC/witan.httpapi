@@ -214,7 +214,7 @@
   (let [command-id (:kixi.comms.command/id event)]
     (when-let [receipt (retreive-receipt db command-id)]
       (let [file-id (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/id])]
-        (create-error! db command-id file-id (str (-> payload :reason name) " -- " payload))
+        (create-error! db command-id file-id (-> payload :reason name))
         (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id)))))
   nil)
 

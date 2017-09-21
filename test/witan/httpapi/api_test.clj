@@ -14,6 +14,8 @@
 
 (def user-id (uuid))
 
+(alias 'ms 'kixi.datastore.metadatastore)
+
 (defn test-system
   [sys-fn]
   (with-redefs [sys/new-authenticator (fn [config] (mocks/->MockAuthenticator user-id [(uuid)]))]
@@ -117,36 +119,12 @@
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"
   (let [auth (get-auth-tokens)
-        file-id (uuid)
-        resp @(http/put (local-url (str "/api/files/" file-id "/metadata"))
-                        {:form-params
-                         {:kixi.datastore.metadatastore/size-bytes 123
-                          :kixi.datastore.metadatastore/file-type "foo"
-                          :kixi.datastore.metadatastore/header false
-                          :kixi.datastore.metadatastore/name "fail"
-                          :kixi.datastore.metadatastore/description "please"}
-                         :throw-exceptions false
-                         :content-type :json
-                         :as :json
-                         :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}})]
-    (is (= 202 (:status resp)))
-    (when-let [receipt-id (get-in resp [:body :receipt])]
-      (log/debug "file-errors-test - Got receipt ID" receipt-id)
-      (loop [tries 10]
-        (log/debug "file-errors-test - Checking receipt ..." tries)
-        (let [url (local-url (str "/api/receipts/" receipt-id))
-              receipt-resp @(http/get url
-                                      {:throw-exceptions false
-                                       :as :json
-                                       :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}})]
-          (if (not= 200 (:status receipt-resp))
-            (do
-              (log/debug "file-errors-test - ...got" (:status receipt-resp))
-              (if (pos? tries)
-                (recur (dec tries))
-                (is false (str "file-errors-test - Never returned a 200: " url " - "receipt-resp))))
-            (do
-              (is (= 200 (:status receipt-resp)))
-              (let [body (:body receipt-resp)
-                    reason (get-in body [:error :witan.httpapi.spec/reason])]
-                (is (= "mock-fail" reason))))))))))
+        file-name  "./test-resources/metadata-one-valid.csv"
+        metadata (create-metadata user-id file-name)
+        receipt-resp (put-metadata auth (assoc metadata 
+                                                     ::ms/id (uuid)))]
+    (let [receipt-resp (wait-for-receipt auth receipt-resp)]
+      (is (= 200 receipt-resp)
+          "metadata receipt")
+      (is (= "file-not-exist"
+             (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))

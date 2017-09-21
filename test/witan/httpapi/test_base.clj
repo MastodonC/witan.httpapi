@@ -189,19 +189,12 @@
 
 (defn put-metadata
   [auth metadata]
-  (let [resp @(http/put (local-url (str "/api/files/" (::ms/id metadata) "/metadata"))
-                        {:throw-exceptions false
-                         :content-type :json
-                         :as :json                          
-                         :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}
-                         :form-params (select-keys metadata [::ms/size-bytes ::ms/file-type ::ms/description ::ms/name ::ms/header])})]
-    (when-accepted resp
-      (let [receipt-resp (wait-for-receipt auth resp)]
-        (is (= 200 (:status receipt-resp))
-            "metadata receipt")        
-        (is-submap metadata
-                   (:body receipt-resp))
-        (:body receipt-resp)))))
+  @(http/put (local-url (str "/api/files/" (::ms/id metadata) "/metadata"))
+             {:throw-exceptions false
+              :content-type :json
+              :as :json                          
+              :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}
+              :form-params (select-keys metadata [::ms/size-bytes ::ms/file-type ::ms/description ::ms/name ::ms/header])}))
 
 (defn create-metadata
   ([uid file-name]
@@ -245,6 +238,11 @@
       (when link
         (upload-file link
                      file-name)
-        (put-metadata auth
-                      md-with-id))
-      md-with-id)))
+        (let [resp (put-metadata auth md-with-id)]
+          (when-accepted resp
+            (let [receipt-resp (wait-for-receipt auth resp)]
+              (is (= 200 (:status receipt-resp))
+                  "metadata receipt")        
+              (is-submap metadata
+                         (:body receipt-resp))
+              (:body receipt-resp))))))))

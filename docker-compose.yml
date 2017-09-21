@@ -18,8 +18,8 @@ datastore:
           - CONFIG_PROFILE=local-kinesis
           - ZOOKEEPER=zookeeper
           - DYNAMODB=http://dynamodb:8000
-          - COMMAND_STREAM=dev-witan-command
-          - EVENT_STREAM=dev-witan-event
+          - COMMAND_STREAM=test-witan-httpapi-command
+          - EVENT_STREAM=test-witan-httpapi-event
           - ENVIRONMENT=local-kinesis
           - VHOST=localhost
           - PORT=38080
