@@ -7,7 +7,7 @@ datastore:
         image: 'mastodonc/kixi.datastore:latest'
         #use volumes_from until we upgrade and get depends_on
         ports:
-          - "38080:38080"
+          - "38001:38001"
         volumes_from:
           - "dynamodb"
         volumes:
@@ -22,6 +22,6 @@ datastore:
           - EVENT_STREAM=test-jenkins-witan-httpapi-event
           - ENVIRONMENT=local-kinesis
           - VHOST=localhost
-          - PORT=38080
+          - PORT=38001
         env_file:
           - aws-variables.env
