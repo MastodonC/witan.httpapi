@@ -1,4 +1,5 @@
 (ns witan.httpapi.api-test
+  {:integration true}
   (:require [witan.httpapi.api :refer :all]
             [witan.httpapi.test-base :refer :all]
             [witan.httpapi.system :as sys]
@@ -121,7 +122,7 @@
   (let [auth (get-auth-tokens)
         file-name  "./test-resources/metadata-one-valid.csv"
         metadata (create-metadata user-id file-name)
-        receipt-resp (put-metadata auth (assoc metadata 
+        receipt-resp (put-metadata auth (assoc metadata
                                                      ::ms/id (uuid)))]
     (let [receipt-resp (wait-for-receipt auth receipt-resp)]
       (is (= 200 (:status receipt-resp))
