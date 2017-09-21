@@ -124,7 +124,7 @@
         receipt-resp (put-metadata auth (assoc metadata 
                                                      ::ms/id (uuid)))]
     (let [receipt-resp (wait-for-receipt auth receipt-resp)]
-      (is (= 200 receipt-resp)
+      (is (= 200 (:status receipt-resp))
           "metadata receipt")
       (is (= "file-not-exist"
              (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))
