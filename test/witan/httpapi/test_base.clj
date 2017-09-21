@@ -158,7 +158,8 @@
 
 (defmethod upload-file "file"
   [target file-name]
-  (let [target-file (io/file (strip-protocol target))]
+  (let [target-file (io/file (str "." (strip-protocol target)))]
+    (prn "TARGET: " target-file)
     (io/make-parents target-file)
     (io/copy (io/file file-name)
              (doto target-file

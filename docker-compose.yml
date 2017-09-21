@@ -1,17 +1,17 @@
 dynamodb:
         image: rajatvig/dynalite-alpine
         ports:
-          - '8000'
+          - '38000:8000'
 
 datastore:
         image: 'mastodonc/kixi.datastore:latest'
         #use volumes_from until we upgrade and get depends_on
         ports:
-          - "38080:8080"
+          - "38080:38080"
         volumes_from:
           - "dynamodb"
         volumes:
-          - /tmp/kixi-datastore:/tmp/kixi-datastore
+          - ./tmp/kixi-datastore:/tmp/kixi-datastore
         links:
           - dynamodb:dynamodb
         environment:
@@ -21,5 +21,7 @@ datastore:
           - COMMAND_STREAM=dev-witan-command
           - EVENT_STREAM=dev-witan-event
           - ENVIRONMENT=local-kinesis
+          - VHOST=localhost
+          - PORT=38080
         env_file:
           - aws-variables.env

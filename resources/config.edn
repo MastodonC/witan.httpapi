@@ -12,8 +12,8 @@
                           :prod "/root/prod_pubkey.pem"}}
  :directory {:heimdall #profile {:default {:host "kixi.heimdall.marathon.mesos"
                                            :port 10010}
-                                 :test {:host #or [#env DATASTORE_HOST "localhost"]
-                                        :port #or [#env DATASTORE_PORT 3002]}
+                                 :test {:host #or [#env HEIMDALL_HOST "localhost"]
+                                        :port #or [#env HEIMDALL_PORT 3002]}
                                  :development {:host #or [#env HEIMDALL_HOST "localhost"]
                                                :port #or [#env HEIMDALL_PORT 3002]}}
              :datastore #profile {:default {:host "kixi.datastore.marathon.mesos"
@@ -21,7 +21,7 @@
                                   :development {:host #or [#env DATASTORE_HOST "localhost"]
                                                 :port #or [#env DATASTORE_PORT 8080]}
                                   :test {:host #or [#env DATASTORE_HOST "localhost"]
-                                         :port #or [#env DATASTORE_PORT 8080]}}}
+                                         :port #or [#env DATASTORE_PORT 38080]}}}
  :verbose-logging? #profile {:default true
                              :staging false
                              :prod false}
@@ -40,7 +40,7 @@
                      :dev-staging {:prefix "dev"
                                    :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}}
                      :test {:prefix "test"
-                            :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}
+                            :db {:endpoint #or [#env DYNAMODB_ENDPOINT "http://localhost:38000"]}
                             :alerts false}
                      :staging-jenkins {:prefix "staging-jenkins"
                                        :db {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}}
@@ -56,7 +56,6 @@
  :comms #profile {:test {:kinesis {:profile "test"
                                    :app ^:ref [:service-name]
                                    :endpoint ^:ref [:aws :eu-central-1 :kinesis-endpoint]
-                                   :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT ^:ref [:aws :eu-central-1 :dynamodb-endpoint]]
                                    :region-name ^:ref [:aws :eu-central-1 :region]
                                    :metric-level :NONE
                                    :initial-lease-table-read-capacity 1

@@ -16,16 +16,9 @@
   [opts]
   (merge {:content-type :transit+json
           :accept :transit+json
-          ;;:as :transit+json ;; don't let aleph try to decode, it breaks with empty bodies
+          :as :transit+json
           :throw-exceptions false}
          opts))
-
-;; We use this fn to avoid an exception thrown by Aleph
-;; A fix proposed here: https://github.com/ztellman/aleph/pull/331
-(defn parse-body
-  [^java.io.ByteArrayInputStream body]
-  (when (and body (pos? (.available body)))
-    (parse-transit body :json {})))
 
 (defrecord HttpRequester [directory]
   Request
@@ -33,12 +26,12 @@
     (let [full-route (build-route (get directory service) route)]
       (log/debug "GET request sent to" service full-route)
       (let [{:keys [body status]} @(http/get full-route (add-default-opts opts))]
-        [status (parse-body body)])))
+        [status body])))
   (POST [this service route opts]
     (let [full-route (build-route (get directory service) route)]
       (log/debug "POST request sent to" service full-route)
       (let [{:keys [body status]} @(http/post full-route (add-default-opts opts))]
-        [status (parse-body body)])))
+        [status body])))
 
   component/Lifecycle
   (start [component]
