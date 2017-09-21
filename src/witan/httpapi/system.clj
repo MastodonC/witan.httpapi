@@ -1,34 +1,53 @@
 (ns witan.httpapi.system
   (:gen-class)
   (:require [com.stuartsierra.component :as component]
-            [aero.core :refer [read-config]]
             [kixi.log :as kixi-log]
-            #_[kixi.comms :as comms]
+            [kixi.comms :as comms]
+            [kixi.comms.components.kinesis :as kinesis]
+            [kixi.comms.components.coreasync :as coreasync]
             [taoensso.timbre :as timbre]
             [signal.handler :refer [with-handler]]
             ;;
+            [witan.httpapi.config :as config]
             [witan.httpapi.api :as api]
             [witan.httpapi.components.auth :as auth]
             [witan.httpapi.components.webserver :as webserver]
-            [witan.httpapi.components.requests :as requests]))
+            [witan.httpapi.components.requests :as requests]
+            [witan.httpapi.components.activities :as activities]
+            [witan.httpapi.components.database :as database]))
 
 (defn new-requester
   [config]
   (requests/->HttpRequester (:directory config)))
 
+(defn new-activities
+  []
+  (activities/->Activities))
+
 (defn new-authenticator
   [config]
   (auth/map->PubKeyAuthenticator (:auth config)))
+
+(defn new-database
+  [config profile]
+  (database/->DynamoDB (:dynamodb config) profile))
 
 (defn new-webserver
   [config]
   (webserver/->WebServer api/handler (:webserver config)))
 
+(defn new-comms
+  [config]
+  (case ((comp first keys :comms) config)
+    :coreasync (coreasync/map->CoreAsync (get-in config [:comms :coreasync]))
+    :kinesis (kinesis/map->Kinesis (get-in config [:comms :kinesis]))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn new-system [profile]
   (timbre/debug "Profile" profile)
-  (let [config (read-config (clojure.java.io/resource "config.edn") {:profile profile})
+  (config/save-profile! profile)
+  (let [config (config/read-config)
         log-config (assoc (:log config)
                           :timestamp-opts kixi-log/default-timestamp-opts)]
     ;; logging config
@@ -39,16 +58,21 @@
                          {:direct-json (kixi-log/timbre-appender-logstash)}
                          {:println (timbre/println-appender)})))
 
-    #_(comms/set-verbose-logging! (:verbose-logging? config))
+    (comms/set-verbose-logging! (:verbose-logging? config))
 
     (component/system-map
+     :comms (new-comms config)
      :requester (new-requester config)
+     :activities (component/using
+                  (new-activities)
+                  [:comms :database])
      :auth (component/using
             (new-authenticator config)
             [:requester])
+     :database (new-database config profile)
      :webserver (component/using
                  (new-webserver config)
-                 [:auth]))))
+                 [:auth :requester :activities]))))
 
 (defn -main [& [arg]]
   (let [profile (or (keyword arg) :staging)

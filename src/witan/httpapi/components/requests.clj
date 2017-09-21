@@ -1,7 +1,8 @@
 (ns witan.httpapi.components.requests
   (:require [com.stuartsierra.component :as component]
             [taoensso.timbre            :as log]
-            [aleph.http :as http]))
+            [aleph.http :as http]
+            [aleph.http.client-middleware :refer [parse-transit]]))
 
 (defprotocol Request
   (GET [this service route opts])
@@ -14,8 +15,9 @@
 (defn add-default-opts
   [opts]
   (merge {:content-type :transit+json
+          :accept :transit+json
           :as :transit+json
-          :accept :transit+json}
+          :throw-exceptions false}
          opts))
 
 (defrecord HttpRequester [directory]

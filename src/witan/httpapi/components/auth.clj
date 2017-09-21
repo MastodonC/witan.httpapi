@@ -26,7 +26,8 @@
              :kixi.user/groups (-> (conj (:user-groups auth-payload)
                                          (:self-group auth-payload))
                                    (set)
-                                   (vec))}
+                                   (vec))
+             :kixi.user/self-group (:self-group auth-payload)}
             (throw (Exception. "Auth token has expired"))))
         (catch Exception e (log/warn e "Failed to unsign an auth token:")))))
 
