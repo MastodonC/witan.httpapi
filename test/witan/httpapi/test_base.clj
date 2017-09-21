@@ -45,7 +45,9 @@
 
 (defn local-url
   [method]
-  (str "http://localhost:8015" method))
+  (if (= profile :staging-jenkins)
+    (str "https://staging-http-api.witanforcities.com" method)
+    (str "http://localhost:8015" method)))
 
 (defn receipt-resp->receipt-url
   [receipt-resp]
