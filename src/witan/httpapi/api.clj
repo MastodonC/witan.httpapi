@@ -127,7 +127,7 @@
           (if (success? s)
             (success 202 r headers)
             (fail s))))
-      
+
       (context "/:id" []
 
         (GET "/upload" req
