@@ -45,7 +45,9 @@
 
 (defn local-url
   [method]
-  (str "http://localhost:8015" method))
+  (if (= profile :staging-jenkins)
+    (str "https://staging-http-api.witanforcities.com" method)
+    (str "http://localhost:8015" method)))
 
 (defn receipt-resp->receipt-url
   [receipt-resp]
@@ -61,7 +63,7 @@
      (let [rr @(http/get receipt-url
                          {:throw-exceptions false
                           :as :json
-                          :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}})]
+                          :headers {:authorization (:auth-token auth)}})]
        (if (not= 200 (:status rr))
          (do
            (when (zero? (mod cnt every-count-tries-emit))
@@ -167,19 +169,19 @@
 
 (defmethod upload-file "https"
   [target file-name]
-  @(http/put target
-             {:body (io/file file-name)}))
+  @(http/put target {:body (io/file file-name)
+                     :headers {"Content-Length" (file-size file-name)}}))
 
 (defn get-upload-link
   [auth]
   (let [resp @(http/post (local-url "/api/files/upload")
                          {:throw-exceptions false
                           :as :json
-                          :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}})]
+                          :headers {:authorization (:auth-token auth)}})]
     (when-accepted resp
       (let [receipt-resp (wait-for-receipt auth resp)]
         (is (= 200 (:status receipt-resp))
-            "upload link receipt")        
+            "upload link receipt")
         (let [body (:body receipt-resp)
               uri (:witan.httpapi.spec/uri body)
               file-id (:kixi.datastore.filestore/id body)]
@@ -192,57 +194,36 @@
   @(http/put (local-url (str "/api/files/" (::ms/id metadata) "/metadata"))
              {:throw-exceptions false
               :content-type :json
-              :as :json                          
-              :headers {:authorization {:witan.httpapi.spec/auth-token (:auth-token auth)}}
+              :as :json
+              :headers {:authorization (:auth-token auth)}
               :form-params (select-keys metadata [::ms/size-bytes ::ms/file-type ::ms/description ::ms/name ::ms/header])}))
 
 (defn create-metadata
-  ([uid file-name]
-   (create-metadata uid file-name nil))
-  ([uid file-name schema-id]
-   (create-metadata
-    {:file-name file-name
-     :type "stored"
-     :provenance {::ms/source "upload"
-                  :kixi.user/id uid}
-     :size-bytes (file-size file-name)
-     :schema-id schema-id
-     :header true}))
-  ([{:keys [^String file-name type schema-id user-groups sharing header size-bytes provenance]}]
-   (merge {}
-          (when type
-            {::ms/type type})
-          (when file-name
-            {::ms/name (subs file-name
-                             (inc (clojure.string/last-index-of file-name "/"))
-                             (clojure.string/last-index-of file-name "."))})
-          (when file-name
-            {::ms/description file-name})
-          (when file-name
-            {::ms/file-type file-name})
-          (when-not (nil? header)
-            {::ms/header header})
-          (when schema-id
-            {::ss/id schema-id})
-          (when provenance
-            {::ms/provenance provenance})
-          (when size-bytes
-            {::ms/size-bytes size-bytes}))))
+  [file-name]
+  {::ms/header true
+   ::ms/size-bytes (file-size file-name)
+   ::ms/name (subs file-name
+                   (inc (clojure.string/last-index-of file-name "/"))
+                   (clojure.string/last-index-of file-name "."))
+   ::ms/description file-name
+   ::ms/file-type (subs file-name
+                        (inc (clojure.string/last-index-of file-name ".")))})
 
 (defn send-file-and-metadata
   [auth file-name metadata]
   (let [[link id] (get-upload-link auth)]
     (is link)
     (is id)
-    (let [md-with-id (assoc metadata ::ms/id id)]
-      (when link
-        (upload-file link
-                     file-name)
+    (when (and link id)
+      (println "XXX GOT LINK" link id)
+      (let [md-with-id (assoc metadata ::ms/id id)]
+        (upload-file link file-name)
+        (println "XXXXXXX FILE UPLOADED" )
         (let [resp (put-metadata auth md-with-id)]
           (when-accepted resp
             (let [receipt-resp (wait-for-receipt auth resp)]
               (is (= 200 (:status receipt-resp))
-                  "metadata receipt")        
+                  "metadata receipt")
               (is-submap metadata
                          (:body receipt-resp))
               (:body receipt-resp))))))))

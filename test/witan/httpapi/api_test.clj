@@ -1,4 +1,5 @@
 (ns witan.httpapi.api-test
+  {:integration true}
   (:require [witan.httpapi.api :refer :all]
             [witan.httpapi.test-base :refer :all]
             [witan.httpapi.system :as sys]
@@ -23,14 +24,16 @@
 
 (defn start-system
   [all-tests]
-  (let [mocks-fn (if (= :test profile)
-                   test-system
-                   std-system)
-        sys (atom (component/start
-                   (mocks-fn
-                    #(sys/new-system profile))))]
+  (if (= :staging-jenkins profile)
     (all-tests)
-    (component/stop @sys)))
+    (let [mocks-fn (if (= :test profile)
+                     test-system
+                     std-system)
+          sys (atom (component/start
+                     (mocks-fn
+                      #(sys/new-system profile))))]
+      (all-tests)
+      (component/stop @sys))))
 
 (use-fixtures :once start-system)
 
@@ -51,15 +54,19 @@
   `(is (spec/valid? ~spec ~r)
        (str (spec/explain-data ~spec ~r))))
 
+(defn login
+  []
+  (->result
+   (http/post (local-url "/api/login")
+              (with-default-opts
+                {:form-params
+                 {:username "test@mastodonc.com"
+                  :password "Secret123"}}))))
+
 (defn get-auth-tokens
   []
-  (let [[r s] (->result
-               (http/post (local-url "/api/login")
-                          (with-default-opts
-                            {:form-params
-                             {:username "test@mastodonc.com"
-                              :password "Secret123"}})))]
-    (is (= 201 s))
+  (let [[r s] (login)]
+    (is (= 201 s) (prn-str r))
     (:token-pair r)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -82,23 +89,16 @@
       (is (= 405 s))))
 
 (deftest login-test
-  (let [[r s] (->result
-               (http/post (local-url "/api/login")
-                          (with-default-opts
-                            {:form-params
-                             {:username "test@mastodonc.com"
-                              :password "Secret123"}})))]
+  (let [[r s] (login)]
     (is (= 201 s))
     (is-spec ::s/token-pair-container r)))
 
 (deftest refresh-test
-  (let [[r s] (->result
+  (let [[rl sl] (login)
+        [r s] (->result
                (http/post (local-url "/api/refresh")
                           (with-default-opts
-                            {:form-params
-                             {:token-pair
-                              {:auth-token "012"
-                               :refresh-token "345"}}})))]
+                            {:form-params rl})))]
     (is (= 201 s))
     (is-spec ::s/token-pair-container r)))
 
@@ -113,18 +113,20 @@
 (deftest retrieve-upload-link
   (let [auth (get-auth-tokens)
         file-name  "./test-resources/metadata-one-valid.csv"
-        metadata (create-metadata user-id file-name)
+        metadata (create-metadata file-name)
         retrieved-metadata (send-file-and-metadata auth file-name metadata)]))
 
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"
   (let [auth (get-auth-tokens)
         file-name  "./test-resources/metadata-one-valid.csv"
-        metadata (create-metadata user-id file-name)
-        receipt-resp (put-metadata auth (assoc metadata 
-                                                     ::ms/id (uuid)))]
-    (let [receipt-resp (wait-for-receipt auth receipt-resp)]
-      (is (= 200 (:status receipt-resp))
-          "metadata receipt")
-      (is (= "file-not-exist"
-             (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))
+        metadata (create-metadata file-name)
+        receipt-resp (put-metadata auth (assoc metadata
+                                               ::ms/id (uuid)))]
+    (if-not (= 202 (:status receipt-resp))
+      (is false (str "Receipt did not return 202: " receipt-resp))
+      (let [receipt-resp (wait-for-receipt auth receipt-resp)]
+        (is (= 200 (:status receipt-resp))
+            "metadata receipt")
+        (is (= "file-not-exist"
+               (get-in receipt-resp [:body :error :witan.httpapi.spec/reason])))))))

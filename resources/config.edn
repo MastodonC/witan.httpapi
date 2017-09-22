@@ -73,6 +73,16 @@
                                           :initial-lease-table-write-capacity 1
                                           :streams {:event #or [#env EVENT_STREAM "staging-witan-event"]
                                                     :command #or [#env COMMAND_STREAM "staging-witan-command"]}}}
+                  :staging-jenkins {:kinesis {:profile "staging-jenkins"
+                                              :app #join [^:ref [:service-name] "-test"]
+                                              :endpoint ^:ref [:aws :eu-central-1 :kinesis-endpoint]
+                                              :dynamodb-endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]
+                                              :region-name ^:ref [:aws :eu-central-1 :region]
+                                              :metric-level :NONE
+                                              :initial-lease-table-read-capacity 1
+                                              :initial-lease-table-write-capacity 1
+                                              :streams {:event "staging-witan-event"
+                                                        :command "staging-witan-command"}}}
                   :staging {:kinesis {:profile "staging"
                                       :app ^:ref [:service-name]
                                       :endpoint ^:ref [:aws :eu-central-1 :kinesis-endpoint]
