@@ -87,6 +87,12 @@
     ::spec/status "complete"}
    nil))
 
+(defn return-receipt
+  [id]
+  [202
+   {:receipt id}
+   {"Location" (str "/receipts/" id)}])
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Uploads
 
@@ -108,9 +114,7 @@
                                  ::command/version "1.0.0"
                                  :kixi/user user}
                           {:partition-key id})
-    [202
-     {:receipt id}
-     {"Location" (str "/receipts/" id)}]))
+    (return-receipt id)))
 
 (defn- retreive-upload-link
   [db id]
@@ -130,7 +134,7 @@
 (defn create-meta-data!
   [{:keys [comms database]} user payload file-id]
   (let [id (comms/uuid)
-        payload' (assoc payload 
+        payload' (assoc payload
                         :kixi.datastore.metadatastore/id file-id
                         :kixi.datastore.metadatastore/type "stored"
                         :kixi.datastore.metadatastore/provenance {:kixi.datastore.metadatastore/source "upload"
@@ -147,22 +151,28 @@
                                         :kixi/user user}
                                        payload')
                           {:partition-key file-id})
-    [202
-     {:receipt id}
-     {"Location" (str "/receipts/" id)}]))
+    (return-receipt id)))
 
 (defn update-meta-data!
-  [{:keys [comms database]} user]
-  (let [id (comms/uuid)]
+  [{:keys [comms database]} user payload file-id]
+  (let [id (comms/uuid)
+        payload' (assoc payload
+                        :kixi.datastore.metadatastore/id file-id
+                        :kixi.datastore.metadatastore/type "stored"
+                        :kixi.datastore.metadatastore/provenance {:kixi.datastore.metadatastore/source "upload"
+                                                                  :kixi.datastore.metadatastore/created (comms/timestamp)
+                                                                  :kixi.user/id (:kixi.user/id user)}
+                        :kixi.datastore.metadatastore/sharing {:kixi.datastore.metadatastore/meta-read #{(:kixi.user/self-group user)}
+                                                               :kixi.datastore.metadatastore/meta-update #{(:kixi.user/self-group user)}
+                                                               :kixi.datastore.metadatastore/file-read #{(:kixi.user/self-group user)}})]
     (create-receipt! database user id)
-    (send-valid-command!* comms {::command/id id
-                                 ::command/type :kixi.datastore.filestore/create-upload-link
-                                 ::command/version "1.0.0"
-                                 :kixi/user user}
-                          {:partition-key id})
-    [202
-     {:receipt id}
-     {"Location" (str "/receipts/" id)}]))
+    (send-valid-command!* comms (merge {::command/id id
+                                        ::command/type :kixi.datastore.filestore/create-upload-link
+                                        ::command/version "1.0.0"
+                                        :kixi/user user}
+                                       payload)
+                          {:partition-key file-id})
+    (return-receipt id)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Errors
