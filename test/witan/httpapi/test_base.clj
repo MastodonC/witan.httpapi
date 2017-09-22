@@ -43,7 +43,7 @@
   [sys-fn]
   (sys-fn))
 
-(defn local-url
+(defn url
   [method]
   (if (= profile :staging-jenkins)
     (str "https://staging-http-api.witanforcities.com" method)
@@ -53,7 +53,7 @@
   [receipt-resp]
   (->> (get-in receipt-resp [:body :receipt])
        (str "/api/receipts/")
-       local-url))
+       url))
 
 (defn wait-for-receipt
   ([auth receipt-resp]
@@ -173,7 +173,7 @@
 
 (defn get-upload-link
   [auth]
-  (let [resp @(http/post (local-url "/api/files/upload")
+  (let [resp @(http/post (url "/api/files/upload")
                          {:throw-exceptions false
                           :as :json
                           :headers {:authorization (:auth-token auth)}})]
@@ -190,7 +190,7 @@
 
 (defn put-metadata
   [auth metadata]
-  @(http/put (local-url (str "/api/files/" (::ms/id metadata) "/metadata"))
+  @(http/put (url (str "/api/files/" (::ms/id metadata) "/metadata"))
              {:throw-exceptions false
               :content-type :json
               :as :json

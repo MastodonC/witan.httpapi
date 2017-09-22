@@ -57,7 +57,7 @@
 (defn login
   []
   (->result
-   (http/post (local-url "/api/login")
+   (http/post (url "/api/login")
               (with-default-opts
                 {:form-params
                  {:username "test@mastodonc.com"
@@ -72,19 +72,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (deftest healthcheck-test
-  (let [[r s] (->result (http/get (local-url "/healthcheck")))]
+  (let [[r s] (->result (http/get (url "/healthcheck")))]
     (is (=  200 s))
     (is (= "hello" (slurp r)))))
 
 (deftest noexist-404-test
-  (let [[r s] (->result (http/get (local-url "/notexist")
+  (let [[r s] (->result (http/get (url "/notexist")
                                   {:throw-exceptions false}))]
     (is (= 404 s))))
 
 ;; Currently doesn't pass and there doesn't appear to be a
 ;; nice way to achieve this
 #_(deftest nomethod-405-test
-    (let [[r s] (->result (http/post (local-url "/healthcheck")
+    (let [[r s] (->result (http/post (url "/healthcheck")
                                      {:throw-exceptions false}))]
       (is (= 405 s))))
 
@@ -96,7 +96,7 @@
 (deftest refresh-test
   (let [[rl sl] (login)
         [r s] (->result
-               (http/post (local-url "/api/refresh")
+               (http/post (url "/api/refresh")
                           (with-default-opts
                             {:form-params rl})))]
     (is (= 201 s))
@@ -104,17 +104,34 @@
 
 (deftest swagger-test
   (let [[r s] (->result
-               (http/get (local-url "/swagger.json")
+               (http/get (url "/swagger.json")
                          {:throw-exceptions false
                           :as :json}))]
     (is (= 200 s) "An error here could indicate a problem generating the swagger JSON")
     (is (= "2.0" (:swagger r)))))
 
-(deftest retrieve-upload-link
+(deftest upload-roundtrip-plus-get-metadata
   (let [auth (get-auth-tokens)
-        file-name  "./test-resources/metadata-one-valid.csv"
-        metadata (create-metadata file-name)
-        retrieved-metadata (send-file-and-metadata auth file-name metadata)]))
+        file-name  "./test-resources/metadata-one-valid.csv"]
+    (testing "Uploading a file"
+      (let [metadata (create-metadata file-name)
+            retrieved-metadata (send-file-and-metadata auth file-name metadata)]
+        (testing "Retrieving the uploaded file's metadata"
+          (let [[fetched-metadata s] (->result
+                                      (http/get (url (str "/api/files/" (::ms/id retrieved-metadata) "/metadata"))
+                                                {:as :json
+                                                 :content-type :json
+                                                 :headers {:authorization (:auth-token auth)}}))]
+            (is (= 200 s))
+            (is (= retrieved-metadata fetched-metadata))))
+        (testing "Retrieving the uploaded file's sharing details"
+          (let [[fetched-sharing s] (->result
+                                     (http/get (url (str "/api/files/" (::ms/id retrieved-metadata) "/sharing"))
+                                               {:as :json
+                                                :content-type :json
+                                                :headers {:authorization (:auth-token auth)}}))]
+            (is (= 200 s))
+            (is-spec ::ms/sharing  fetched-sharing)))))))
 
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"
