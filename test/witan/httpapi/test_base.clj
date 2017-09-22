@@ -161,7 +161,6 @@
 (defmethod upload-file "file"
   [target file-name]
   (let [target-file (io/file (str "." (strip-protocol target)))]
-    (prn "TARGET: " target-file)
     (io/make-parents target-file)
     (io/copy (io/file file-name)
              (doto target-file
@@ -215,10 +214,8 @@
     (is link)
     (is id)
     (when (and link id)
-      (println "XXX GOT LINK" link id)
       (let [md-with-id (assoc metadata ::ms/id id)]
         (upload-file link file-name)
-        (println "XXXXXXX FILE UPLOADED" )
         (let [resp (put-metadata auth md-with-id)]
           (when-accepted resp
             (let [receipt-resp (wait-for-receipt auth resp)]
