@@ -7,6 +7,8 @@
             [witan.httpapi.spec :as s]
             [witan.httpapi.queries :as query]
             ;;
+            [kixi.user :as user]
+            ;;
             [witan.httpapi.components.auth :as auth]
             [witan.httpapi.components.activities :as activities]))
 
@@ -68,9 +70,9 @@
 
     (POST "/login" req
       :summary "Retrieve an authorisation token for further API calls"
-      :body-params [username :- ::s/username
-                    password :- ::s/password]
-      :return ::s/token-pair-container
+      :body-params [username :- ::user/username
+                    password :- ::user/password]
+      :return ::user/token-pair-container
       (let [[status body] (auth/login (auth req) username password)]
         (if (= status 201)
           (success status body)
@@ -78,8 +80,8 @@
 
     (POST "/refresh" req
       :summary "Refreshes an authorisation token"
-      :body-params [token-pair :- ::s/token-pair]
-      :return ::s/token-pair-container
+      :body-params [token-pair :- ::user/token-pair]
+      :return ::user/token-pair-container
       (let [[status body] (auth/refresh (auth req) token-pair)]
         (if (= status 201)
           (success status body)
@@ -97,11 +99,11 @@
   (context "/api" []
     :tags ["api"]
     :coercion :spec
-    :header-params [authorization :- ::s/auth-token]
+    :header-params [authorization :- ::user/auth-token]
     :middleware [authentication-middleware]
 
     (GET "/receipts/:receipt" req
-      :summary "Returns any results associated with the specified receipt"
+      :summary "Redirects to any results associated with the specified receipt"
       :path-params [receipt :- ::s/id]
       (let [[s r headers] (activities/get-receipt-response (activities req) (user req) receipt)]
         (if (success? s)
@@ -120,7 +122,7 @@
 
       (POST "/upload" req
         :summary "Creates an upload address for a new file"
-        :return ::s/id
+        :return ::s/receipt-id-container
         (let [[s r headers] (activities/create-file-upload!
                              (activities req)
                              (user req))]
@@ -145,7 +147,7 @@
         (GET "/metadata" req
           :summary "Return metadata for a specific file"
           :path-params [id :- ::s/id]
-          :return ::s/file-metadata
+          :return ::s/file-metadata-get
           (let [[s r] (query/get-file-metadata (requester req) (:user req) id)]
             (if (success? s)
               (success s r)
@@ -155,8 +157,8 @@
           :summary "Create new metadata for a specific file"
           :path-params [id :- ::s/id]
           :body [metadata ::s/file-metadata-put]
-          :return ::s/id
-          (let [[s r headers] (activities/create-meta-data!
+          :return ::s/receipt-id-container
+          (let [[s r headers] (activities/create-metadata!
                                (activities req)
                                (user req)
                                metadata
@@ -168,10 +170,13 @@
         (POST "/metadata" req
           :summary "Update metadata for a specific file"
           :path-params [id :- ::s/id]
-          :return ::s/id
-          (let [[s r headers] (activities/update-meta-data!
+          :body [metadata-updates ::s/file-metadata-post]
+          :return ::s/receipt-id-container
+          (let [[s r headers] (activities/update-metadata!
                                (activities req)
-                               (user req))]
+                               (user req)
+                               metadata-updates
+                               id)]
             (if (success? s)
               (success 202 r headers)
               (fail s))))

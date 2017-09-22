@@ -11,11 +11,12 @@
             [environ.core :refer [env]]
             [taoensso.timbre :as log]
             [aleph.http :as http]
-            [cheshire.core :as json]))
+            [cheshire.core :as json]
+            ;;
+            [kixi.user :as user]
+            [kixi.datastore.metadatastore :as ms]))
 
 (def user-id (uuid))
-
-(alias 'ms 'kixi.datastore.metadatastore)
 
 (defn test-system
   [sys-fn]
@@ -48,11 +49,6 @@
           :accept :json
           :throw-exceptions false}
          opts))
-
-(defmacro is-spec
-  [spec r]
-  `(is (spec/valid? ~spec ~r)
-       (str (spec/explain-data ~spec ~r))))
 
 (defn login
   []
@@ -91,7 +87,7 @@
 (deftest login-test
   (let [[r s] (login)]
     (is (= 201 s))
-    (is-spec ::s/token-pair-container r)))
+    (is-spec ::user/token-pair-container r)))
 
 (deftest refresh-test
   (let [[rl sl] (login)
@@ -100,7 +96,7 @@
                           (with-default-opts
                             {:form-params rl})))]
     (is (= 201 s))
-    (is-spec ::s/token-pair-container r)))
+    (is-spec ::user/token-pair-container r)))
 
 (deftest swagger-test
   (let [[r s] (->result
@@ -113,9 +109,11 @@
 (deftest upload-roundtrip-plus-get-metadata
   (let [auth (get-auth-tokens)
         file-name  "./test-resources/metadata-one-valid.csv"]
+
     (testing "Uploading a file"
       (let [metadata (create-metadata file-name)
             retrieved-metadata (send-file-and-metadata auth file-name metadata)]
+
         (testing "Retrieving the uploaded file's metadata"
           (let [[fetched-metadata s] (->result
                                       (http/get (url (str "/api/files/" (::ms/id retrieved-metadata) "/metadata"))
@@ -124,6 +122,7 @@
                                                  :headers {:authorization (:auth-token auth)}}))]
             (is (= 200 s))
             (is (= retrieved-metadata fetched-metadata))))
+
         (testing "Retrieving the uploaded file's sharing details"
           (let [[fetched-sharing s] (->result
                                      (http/get (url (str "/api/files/" (::ms/id retrieved-metadata) "/sharing"))
@@ -131,19 +130,62 @@
                                                 :content-type :json
                                                 :headers {:authorization (:auth-token auth)}}))]
             (is (= 200 s))
-            (is-spec ::ms/sharing  fetched-sharing)))))))
+            (is-spec ::ms/sharing (::ms/sharing fetched-sharing))))
+
+        (testing "Updating the file's metadata"
+          (let [new-desc (str "New description " (uuid))
+                new-name (str "New name " (uuid))
+                new-tags #{:foo :bar :baz}
+                new-maintainer "Bob"
+                new-license "Custom"
+                new-source-updated "20170923"
+                new-temporal-coverage-from "20170924"
+                new-temporal-coverage-to   "20170925"
+                update-params {:kixi.datastore.metadatastore.update/description {:set new-desc} ;; optional field
+                               :kixi.datastore.metadatastore.update/name {:set new-name} ;; mandatory field
+                               :kixi.datastore.metadatastore.update/tags {:conj new-tags}
+                               :kixi.datastore.metadatastore.update/source-updated {:set new-source-updated}
+                               :kixi.datastore.metadatastore.update/maintainer {:set new-maintainer}
+
+                               :kixi.datastore.metadatastore.license.update/license {:kixi.datastore.metadatastore.license.update/type {:set new-license}}
+                               :kixi.datastore.metadatastore.time.update/temporal-coverage {:kixi.datastore.metadatastore.time.update/from
+                                                                                            {:set new-temporal-coverage-from}
+                                                                                            :kixi.datastore.metadatastore.time.update/to
+                                                                                            {:set new-temporal-coverage-to}}}
+                update-receipt (post-metadata-update
+                                auth (::ms/id retrieved-metadata) update-params)]
+            (if-not (= 202 (:status update-receipt))
+              (is false (str "Receipt did not return 202: " update-receipt))
+              (let [receipt-resp (wait-for-receipt auth update-receipt)]
+                (is (= 200 (:status receipt-resp))
+                    (str "post metadata receipt" receipt-resp))
+
+                (Thread/sleep 4000) ;; eventual consistency, innit
+                (let [[fetched-metadata s] ((juxt :body :status)
+                                            (get-metadata auth (::ms/id retrieved-metadata)))]
+                  (is (= 200 s))
+                  (is-submap (assoc retrieved-metadata
+                                    ::ms/description new-desc
+                                    ::ms/name new-name
+                                    ::ms/tags (sort (mapv name new-tags))
+                                    ::ms/source-updated new-source-updated
+                                    ::ms/maintainer new-maintainer
+                                    :kixi.datastore.metadatastore.license/license {:kixi.datastore.metadatastore.license/type new-license}
+                                    :kixi.datastore.metadatastore.time/temporal-coverage {:kixi.datastore.metadatastore.time/from new-temporal-coverage-from
+                                                                                          :kixi.datastore.metadatastore.time/to new-temporal-coverage-to})
+                             (update fetched-metadata
+                                     ::ms/tags sort)))))))))))
 
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"
   (let [auth (get-auth-tokens)
         file-name  "./test-resources/metadata-one-valid.csv"
-        metadata (create-metadata file-name)
-        receipt-resp (put-metadata auth (assoc metadata
-                                               ::ms/id (uuid)))]
+        metadata (assoc (create-metadata file-name) ::ms/id (uuid))
+        receipt-resp (put-metadata auth metadata)]
     (if-not (= 202 (:status receipt-resp))
-      (is false (str "Receipt did not return 202: " receipt-resp))
+      (is false (str "Receipt did not return 202: " receipt-resp " - " metadata))
       (let [receipt-resp (wait-for-receipt auth receipt-resp)]
         (is (= 200 (:status receipt-resp))
-            "metadata receipt")
+            (str "metadata receipt" receipt-resp))
         (is (= "file-not-exist"
                (get-in receipt-resp [:body :error :witan.httpapi.spec/reason])))))))

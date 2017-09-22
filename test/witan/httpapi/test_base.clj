@@ -2,10 +2,11 @@
   (:require [aleph.http :as http]
             [clojure.test :as t]
             [clojure.java.io :as io]
-            [clojure data 
+            [clojure data
              [test :refer :all]]
             [witan.httpapi.system :as sys]
             [com.stuartsierra.component :as component]
+            [clojure.spec.alpha :as spec]
             [environ.core :refer [env]]))
 
 (def profile (keyword (env :system-profile "test")))
@@ -64,7 +65,8 @@
                          {:throw-exceptions false
                           :as :json
                           :headers {:authorization (:auth-token auth)}})]
-       (if (not= 200 (:status rr))
+       (if (and (not= 500 (:status rr))
+                (not= 200 (:status rr)))
          (do
            (when (zero? (mod cnt every-count-tries-emit))
              (println "Waited" cnt "times for" receipt-url ". Getting:" rr))
@@ -72,6 +74,13 @@
            (recur auth receipt-url tries (inc cnt) rr))
          rr))
      last-result)))
+
+(defmacro is-spec
+  [spec r]
+  `(do
+     (println "Checking spec validity " ~spec " V: " ~r)
+     (is (spec/valid? ~spec ~r)
+         (str (spec/explain-data ~spec ~r)))))
 
 (defmacro is-submap
   [expected actual & [msg]]
@@ -143,8 +152,8 @@
      (is (= ~k
             k-val#))
      (when (= ~k
-            k-val#)
-        ~@rest)))
+              k-val#)
+       ~@rest)))
 
 (defmulti upload-file
   (fn [^String target file-name]
@@ -188,6 +197,14 @@
           (is file-id)
           [uri file-id])))))
 
+(defn get-metadata
+  [auth id]
+  @(http/get (url (str "/api/files/" id "/metadata"))
+             {:as :json
+              :content-type :json
+              :throw-exceptions false
+              :headers {:authorization (:auth-token auth)}}))
+
 (defn put-metadata
   [auth metadata]
   @(http/put (url (str "/api/files/" (::ms/id metadata) "/metadata"))
@@ -196,6 +213,15 @@
               :as :json
               :headers {:authorization (:auth-token auth)}
               :form-params (select-keys metadata [::ms/size-bytes ::ms/file-type ::ms/description ::ms/name ::ms/header])}))
+
+(defn post-metadata-update
+  [auth id params]
+  @(http/post (url (str "/api/files/" id "/metadata"))
+              {:throw-exceptions false
+               :content-type :json
+               :as :json
+               :headers {:authorization (:auth-token auth)}
+               :form-params params}))
 
 (defn create-metadata
   [file-name]

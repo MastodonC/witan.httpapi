@@ -8,6 +8,7 @@
             [witan.httpapi.spec :as spec]))
 
 (sh/alias 'command 'kixi.command)
+(sh/alias 'kdcs 'kixi.datastore.communication-specs)
 
 (def receipts-table "receipts")
 (def upload-links-table "upload-links")
@@ -75,7 +76,9 @@
       (nil? receipt)                                      [404 nil nil]
       (not= (:kixi.user/id receipt) (:kixi.user/id user)) [401 nil nil]
       (= "pending" (::spec/status receipt))               [202 nil nil]
-      :else [303 nil {"Location" (::spec/uri receipt)}])))
+      (and (= "complete" (::spec/status receipt))
+           (nil? (::spec/uri receipt)))                   [200 nil nil]
+      (= "complete" (::spec/status receipt))              [303 nil {"Location" (::spec/uri receipt)}])))
 
 (defn complete-receipt!
   [db id uri]
@@ -83,9 +86,15 @@
    db
    receipts-table
    {::spec/id id}
-   {::spec/uri uri
-    ::spec/status "complete"}
+   (merge {::spec/status "complete"}
+          (when uri {::spec/uri uri}))
    nil))
+
+(defn return-receipt
+  [id]
+  [202
+   {:receipt-id id}
+   {"Location" (str "/receipts/" id)}])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Uploads
@@ -108,9 +117,7 @@
                                  ::command/version "1.0.0"
                                  :kixi/user user}
                           {:partition-key id})
-    [202
-     {:receipt id}
-     {"Location" (str "/receipts/" id)}]))
+    (return-receipt id)))
 
 (defn- retreive-upload-link
   [db id]
@@ -127,10 +134,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Metadata
 
-(defn create-meta-data!
+(defn create-metadata!
   [{:keys [comms database]} user payload file-id]
   (let [id (comms/uuid)
-        payload' (assoc payload 
+        payload' (assoc payload
                         :kixi.datastore.metadatastore/id file-id
                         :kixi.datastore.metadatastore/type "stored"
                         :kixi.datastore.metadatastore/provenance {:kixi.datastore.metadatastore/source "upload"
@@ -147,22 +154,19 @@
                                         :kixi/user user}
                                        payload')
                           {:partition-key file-id})
-    [202
-     {:receipt id}
-     {"Location" (str "/receipts/" id)}]))
+    (return-receipt id)))
 
-(defn update-meta-data!
-  [{:keys [comms database]} user]
+(defn update-metadata!
+  [{:keys [comms database]} user metadata-updates file-id]
   (let [id (comms/uuid)]
     (create-receipt! database user id)
-    (send-valid-command!* comms {::command/id id
-                                 ::command/type :kixi.datastore.filestore/create-upload-link
-                                 ::command/version "1.0.0"
-                                 :kixi/user user}
-                          {:partition-key id})
-    [202
-     {:receipt id}
-     {"Location" (str "/receipts/" id)}]))
+    (send-valid-command!* comms (merge {::command/id id
+                                        ::command/type :kixi.datastore.metadatastore/update
+                                        ::command/version "1.0.0"
+                                        :kixi/user user}
+                                       (assoc metadata-updates :kixi.datastore.metadatastore/id file-id))
+                          {:partition-key file-id})
+    (return-receipt id)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Errors
@@ -227,31 +231,34 @@
         (complete-receipt! db command-id (str "/api/files/" file-id "/metadata")))))
   nil)
 
+(defmethod on-event
+  [:kixi.datastore.file-metadata/updated "1.0.0"]
+  [db {:keys [kixi.comms.event/payload] :as event}]
+  (when (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-update)
+    (let [command-id (:kixi.comms.command/id event)]
+      (when-let [receipt (retreive-receipt db command-id)]
+        (let [file-id (:kixi.datastore.metadatastore/id payload)]
+          (complete-receipt! db command-id nil))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
+
+(def event-handlers
+  {:kixi.datastore.filestore/upload-link-created ["1.0.0" :witan-httpapi-activity-upload-file]
+   :kixi.datastore.file-metadata/rejected        ["1.0.0" :witan-httpapi-activity-file-metadata-rejected]
+   :kixi.datastore.file/created                  ["1.0.0" :witan-httpapi-activity-file-created]
+   :kixi.datastore.file-metadata/updated         ["1.0.0" :witan-httpapi-activity-metadata-updated]})
+
+(defn event-data->handler
+  [{:keys [comms database]} [type [version group]]]
+  (comms/attach-event-handler!
+   comms group type version (partial on-event database)))
 
 (defrecord Activities []
   component/Lifecycle
   (start [{:keys [comms database] :as component}]
     (log/info "Starting Activities" (type comms))
-    (let [ehs [(comms/attach-event-handler!
-                comms
-                :witan-httpapi-activity-upload-file
-                :kixi.datastore.filestore/upload-link-created
-                "1.0.0"
-                (partial on-event database))
-               (comms/attach-event-handler!
-                comms
-                :witan-httpapi-activity-file-metadata-rejected
-                :kixi.datastore.file-metadata/rejected
-                "1.0.0"
-                (partial on-event database))
-               (comms/attach-event-handler!
-                comms
-                :witan-httpapi-activity-file-created
-                :kixi.datastore.file/created
-                "1.0.0"
-                (partial on-event database))]]
+    (let [ehs (mapv (partial event-data->handler component) event-handlers)]
       (assoc component :ehs ehs)))
 
   (stop [{:keys [comms] :as component}]
