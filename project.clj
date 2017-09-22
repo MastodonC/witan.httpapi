@@ -33,5 +33,5 @@
              :uberjar {:aot  :all
                        :main witan.httpapi.system
                        :uberjar-name "witan.httpapi-standalone.jar"}}
-  :test-selectors {:default :all
+  :test-selectors {:default (constantly true)
                    :integration :integration})
