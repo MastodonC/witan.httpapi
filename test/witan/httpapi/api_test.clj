@@ -13,11 +13,10 @@
             [aleph.http :as http]
             [cheshire.core :as json]
             ;;
-            [kixi.user :as user]))
+            [kixi.user :as user]
+            [kixi.datastore.metadatastore :as ms]))
 
 (def user-id (uuid))
-
-(alias 'ms 'kixi.datastore.metadatastore)
 
 (defn test-system
   [sys-fn]
@@ -50,11 +49,6 @@
           :accept :json
           :throw-exceptions false}
          opts))
-
-(defmacro is-spec
-  [spec r]
-  `(is (spec/valid? ~spec ~r)
-       (str (spec/explain-data ~spec ~r))))
 
 (defn login
   []
@@ -133,7 +127,7 @@
                                                 :content-type :json
                                                 :headers {:authorization (:auth-token auth)}}))]
             (is (= 200 s))
-            (is-spec ::ms/sharing  fetched-sharing)))))))
+            (is-spec ::ms/sharing (::ms/sharing fetched-sharing))))))))
 
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"

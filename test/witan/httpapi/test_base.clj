@@ -6,6 +6,7 @@
              [test :refer :all]]
             [witan.httpapi.system :as sys]
             [com.stuartsierra.component :as component]
+            [clojure.spec.alpha :as spec]
             [environ.core :refer [env]]))
 
 (def profile (keyword (env :system-profile "test")))
@@ -73,6 +74,13 @@
            (recur auth receipt-url tries (inc cnt) rr))
          rr))
      last-result)))
+
+(defmacro is-spec
+  [spec r]
+  `(do
+     (println "Checking spec validity " ~spec " V: " ~r)
+     (is (spec/valid? ~spec ~r)
+         (str (spec/explain-data ~spec ~r)))))
 
 (defmacro is-submap
   [expected actual & [msg]]
