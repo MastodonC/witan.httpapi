@@ -38,6 +38,7 @@
                 kixi.command/id
                 kixi/user]} cmd-with-id
         {:keys [partition-key]} opts]
+    (println "XXXXXXXXX" cmd-with-id)
     (when-not (s/valid? :kixi/command cmd-with-id)
       (throw (ex-info "Invalid command" (s/explain-data :kixi/command cmd-with-id))))
     (when-not (s/valid? ::command/options opts)
@@ -131,7 +132,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Metadata
 
-(defn create-meta-data!
+(defn create-metadata!
   [{:keys [comms database]} user payload file-id]
   (let [id (comms/uuid)
         payload' (assoc payload
@@ -153,7 +154,7 @@
                           {:partition-key file-id})
     (return-receipt id)))
 
-(defn update-meta-data!
+(defn update-metadata!
   [{:keys [comms database]} user payload file-id]
   (let [id (comms/uuid)
         payload' (assoc payload

@@ -2,7 +2,7 @@
   (:require [aleph.http :as http]
             [clojure.test :as t]
             [clojure.java.io :as io]
-            [clojure data 
+            [clojure data
              [test :refer :all]]
             [witan.httpapi.system :as sys]
             [com.stuartsierra.component :as component]
@@ -64,7 +64,8 @@
                          {:throw-exceptions false
                           :as :json
                           :headers {:authorization (:auth-token auth)}})]
-       (if (not= 200 (:status rr))
+       (if (and (not= 500 (:status rr))
+                (not= 200 (:status rr)))
          (do
            (when (zero? (mod cnt every-count-tries-emit))
              (println "Waited" cnt "times for" receipt-url ". Getting:" rr))
@@ -143,8 +144,8 @@
      (is (= ~k
             k-val#))
      (when (= ~k
-            k-val#)
-        ~@rest)))
+              k-val#)
+       ~@rest)))
 
 (defmulti upload-file
   (fn [^String target file-name]

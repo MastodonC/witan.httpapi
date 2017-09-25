@@ -11,7 +11,9 @@
             [environ.core :refer [env]]
             [taoensso.timbre :as log]
             [aleph.http :as http]
-            [cheshire.core :as json]))
+            [cheshire.core :as json]
+            ;;
+            [kixi.user :as user]))
 
 (def user-id (uuid))
 
@@ -91,7 +93,7 @@
 (deftest login-test
   (let [[r s] (login)]
     (is (= 201 s))
-    (is-spec ::s/token-pair-container r)))
+    (is-spec ::user/token-pair-container r)))
 
 (deftest refresh-test
   (let [[rl sl] (login)
@@ -100,7 +102,7 @@
                           (with-default-opts
                             {:form-params rl})))]
     (is (= 201 s))
-    (is-spec ::s/token-pair-container r)))
+    (is-spec ::user/token-pair-container r)))
 
 (deftest swagger-test
   (let [[r s] (->result
@@ -137,13 +139,12 @@
   "Trigger an error by trying to PUT metadata that doesn't exist"
   (let [auth (get-auth-tokens)
         file-name  "./test-resources/metadata-one-valid.csv"
-        metadata (create-metadata file-name)
-        receipt-resp (put-metadata auth (assoc metadata
-                                               ::ms/id (uuid)))]
+        metadata (assoc (create-metadata file-name) ::ms/id (uuid))
+        receipt-resp (put-metadata auth metadata)]
     (if-not (= 202 (:status receipt-resp))
-      (is false (str "Receipt did not return 202: " receipt-resp))
+      (is false (str "Receipt did not return 202: " receipt-resp " - " metadata))
       (let [receipt-resp (wait-for-receipt auth receipt-resp)]
         (is (= 200 (:status receipt-resp))
-            "metadata receipt")
+            (str "metadata receipt" receipt-resp))
         (is (= "file-not-exist"
                (get-in receipt-resp [:body :error :witan.httpapi.spec/reason])))))))
