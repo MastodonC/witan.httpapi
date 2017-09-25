@@ -15,7 +15,13 @@
              [license :as kdm-license]
              [time :as kdm-time]]
             [kixi.datastore.filestore :as kdf]
+            [kixi.datastore.metadatastore.update :as kdmu]
+            [com.gfredericks.schpec :refer [alias]]
             [kixi.user :as user]))
+
+(alias 'kdmu-geography 'kixi.datastore.metadatastore.geography.update)
+(alias 'kdmu-license 'kixi.datastore.metadatastore.license.update)
+(alias 'kdmu-time 'kixi.datastore.metadatastore.time.update)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This is so that context-level header-params
@@ -37,61 +43,6 @@
 
 (s/def ::id (api-spec sc/uuid? "string"))
 
-;; Permissions
-;;(s/def ::kdm/meta-read (s/coll-of sc/uuid?))
-;;(s/def ::kdm/meta-update (s/coll-of sc/uuid?))
-;;(s/def ::kdm/file-read (s/coll-of sc/uuid?))
-
-;; Metadata
-;;(s/def ::kdm/size-bytes (api-spec varint? "integer"))
-;;(s/def ::kdm/file-type spec/string?)
-;;(s/def ::kdm/header spec/boolean?)
-;;(s/def ::kdm/name spec/string?)
-;;(s/def ::kdm/id (api-spec uuid? "string"))
-;;(s/def ::kdm/type spec/string?)
-;;(s/def ::kdm/description spec/string?)
-;;(s/def ::kdm/source spec/string?)
-;;(s/def ::kdm/created (api-spec timestamp? "string"))
-
-;; (s/def ::kdm/provenance (s/keys :req [::kdm/source
-;;                                       ::kdm/created
-;;                                       :kixi.user/id]))
-;; (s/def ::kdm/sharing (s/keys :opt [::kdm/meta-read
-;;                                    ::kdm/meta-update
-;;                                    ::kdm/file-read]))
-;; (s/def ::kdf/id (api-spec uuid? "string"))
-
-;; (s/def ::kdm-geography/level string?)
-;; (s/def ::kdm-geography/type #{"smallest"})
-
-;; (defmulti geography ::type)
-
-;; (defmethod geography "smallest"
-;;   [_]
-;;   (s/keys :req [::type
-;;                 ::level]))
-
-;; (s/def ::kdm-geography/geography
-;;   (s/multi-spec geography ::type))
-
-;; ;;;;
-
-;; (s/def ::kdm-license/usage string?)
-;; (s/def ::kdm-license/type string?)
-
-;; (s/def ::kdm-license/license
-;;   (s/keys :req [::type ::usage]))
-
-;; ;;;;
-
-;; (s/def ::kdm-time/from (s/nilable date))
-;; (s/def ::kdm-time/to (s/nilable date))
-
-;; (s/def ::kdm-time/temporal-coverage
-;;   (s/keys :opt [::from ::to]))
-
-;;;;
-
 (s/def ::file-metadata
   (s/keys :req [::kdm/size-bytes
                 ::kdm/file-type
@@ -112,24 +63,24 @@
                 ::kdm-geography/geography]))
 
 (s/def ::file-metadata-put
-  (s/keys :req [:kixi.datastore.metadatastore/size-bytes
-                :kixi.datastore.metadatastore/file-type
-                :kixi.datastore.metadatastore/header
-                :kixi.datastore.metadatastore/name]
-          :opt [:kixi.datastore.metadatastore/description]))
+  (s/keys :req [::kdm/size-bytes
+                ::kdm/file-type
+                ::kdm/header
+                ::kdm/name]
+          :opt [::kdm/description]))
 
 (s/def ::file-metadata-post
-  (s/keys :opt [::kdm-time/temporal-coverage
-                ::kdm-geography/geography
-                ::kdm/source-created
-                ::kdm/source-updated
-                ::kdm-license/license
-                ::kdm/tags
-                ::kdm/author
-                ::kdm/source
-                ::kdm/maintainer
-                ::kdm/name
-                ::kdm/description]))
+  (s/keys :opt [::kdmu-time/temporal-coverage
+                ::kdmu-geography/geography
+                ::kdmu/source-created
+                ::kdmu/source-updated
+                ::kdmu-license/license
+                ::kdmu/tags
+                ::kdmu/author
+                ::kdmu/source
+                ::kdmu/maintainer
+                ::kdmu/name
+                ::kdmu/description]))
 
 (s/def ::file-sharing
   (s/keys :req [::kdm/sharing]))

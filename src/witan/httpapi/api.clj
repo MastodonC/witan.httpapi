@@ -167,19 +167,19 @@
               (success 202 r headers)
               (fail s r))))
 
-        #_(POST "/metadata" req
-            :summary "Update metadata for a specific file"
-            :path-params [id :- ::s/id]
-            :body [metadata ::s/file-metadata-post]
-            :return ::s/id
-            (let [[s r headers] (activities/update-metadata!
-                                 (activities req)
-                                 (user req)
-                                 metadata
-                                 id)]
-              (if (success? s)
-                (success 202 r headers)
-                (fail s))))
+        (POST "/metadata" req
+          :summary "Update metadata for a specific file"
+          :path-params [id :- ::s/id]
+          :body [metadata ::s/file-metadata-post]
+          :return ::s/id
+          (let [[s r headers] (activities/update-metadata!
+                               (activities req)
+                               (user req)
+                               metadata
+                               id)]
+            (if (success? s)
+              (success 202 r headers)
+              (fail s))))
 
         (GET "/errors/:error-id" req
           :summary "Return specific error for a specific file"

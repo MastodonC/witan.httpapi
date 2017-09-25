@@ -206,6 +206,15 @@
               :headers {:authorization (:auth-token auth)}
               :form-params (select-keys metadata [::ms/size-bytes ::ms/file-type ::ms/description ::ms/name ::ms/header])}))
 
+(defn post-metadata-update
+  [auth id params]
+  @(http/post (url (str "/api/files/" id "/metadata"))
+              {:throw-exceptions false
+               :content-type :json
+               :as :json
+               :headers {:authorization (:auth-token auth)}
+               :form-params params}))
+
 (defn create-metadata
   [file-name]
   {::ms/header true

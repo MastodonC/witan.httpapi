@@ -109,9 +109,11 @@
 (deftest upload-roundtrip-plus-get-metadata
   (let [auth (get-auth-tokens)
         file-name  "./test-resources/metadata-one-valid.csv"]
+
     (testing "Uploading a file"
       (let [metadata (create-metadata file-name)
             retrieved-metadata (send-file-and-metadata auth file-name metadata)]
+
         (testing "Retrieving the uploaded file's metadata"
           (let [[fetched-metadata s] (->result
                                       (http/get (url (str "/api/files/" (::ms/id retrieved-metadata) "/metadata"))
@@ -120,6 +122,7 @@
                                                  :headers {:authorization (:auth-token auth)}}))]
             (is (= 200 s))
             (is (= retrieved-metadata fetched-metadata))))
+
         (testing "Retrieving the uploaded file's sharing details"
           (let [[fetched-sharing s] (->result
                                      (http/get (url (str "/api/files/" (::ms/id retrieved-metadata) "/sharing"))
@@ -127,7 +130,20 @@
                                                 :content-type :json
                                                 :headers {:authorization (:auth-token auth)}}))]
             (is (= 200 s))
-            (is-spec ::ms/sharing (::ms/sharing fetched-sharing))))))))
+            (is-spec ::ms/sharing (::ms/sharing fetched-sharing))))
+
+        (testing "Updating the file's metadata"
+          (let [new-desc "New description"
+                update-receipt-1 (post-metadata-update
+                                  auth (::ms/id retrieved-metadata)
+                                  {:kixi.datastore.metadatastore.update/description {:set new-desc}})]
+            (if-not (= 202 (:status update-receipt-1))
+              (is false (str "Receipt did not return 202: " update-receipt-1))
+              (let [receipt-resp (wait-for-receipt auth update-receipt-1)]
+                (is (= 200 (:status receipt-resp))
+                    (str "post metadata receipt" receipt-resp))
+                (is (= (assoc retrieved-metadata :kixi.datastore.metadatastore/description new-desc)
+                       receipt-resp))))))))))
 
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"
