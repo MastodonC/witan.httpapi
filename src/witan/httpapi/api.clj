@@ -170,12 +170,12 @@
         (POST "/metadata" req
           :summary "Update metadata for a specific file"
           :path-params [id :- ::s/id]
-          :body [metadata ::s/file-metadata-post]
+          :body [metadata-updates ::s/file-metadata-post]
           :return ::s/id
           (let [[s r headers] (activities/update-metadata!
                                (activities req)
                                (user req)
-                               metadata
+                               metadata-updates
                                id)]
             (if (success? s)
               (success 202 r headers)

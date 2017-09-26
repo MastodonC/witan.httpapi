@@ -62,13 +62,6 @@
                 ::kdm-time/temporal-coverage
                 ::kdm-geography/geography]))
 
-(s/def ::file-metadata-put
-  (s/keys :req [::kdm/size-bytes
-                ::kdm/file-type
-                ::kdm/header
-                ::kdm/name]
-          :opt [::kdm/description]))
-
 (s/def ::file-metadata-post
   (s/keys :opt [::kdmu-time/temporal-coverage
                 ::kdmu-geography/geography
@@ -82,12 +75,24 @@
                 ::kdmu/name
                 ::kdmu/description]))
 
+(s/def ::file-metadata-put
+  (s/merge
+   ::file-metadata-post
+   (s/keys :req [::kdm/size-bytes
+                 ::kdm/file-type
+                 ::kdm/header
+                 ::kdm/name])))
+
 (s/def ::file-sharing
   (s/keys :req [::kdm/sharing]))
 
 (s/def ::file-info
   (s/merge ::file-metadata
            ::file-sharing))
+
+(s/def ::metadata-update
+  (s/merge (s/keys :req [::kdm/id])
+           ::file-metadata-post))
 
 ;; Files
 (s/def ::total spec/int?)
@@ -148,3 +153,8 @@
   [::kdf/create-file-metadata "1.0.0"]
   [_]
   ::file-info)
+
+(defmethod comms/command-payload
+  [::kdm/update "1.0.0"]
+  [_]
+  ::metadata-update)

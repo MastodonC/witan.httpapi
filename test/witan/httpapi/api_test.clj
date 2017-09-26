@@ -142,8 +142,15 @@
               (let [receipt-resp (wait-for-receipt auth update-receipt-1)]
                 (is (= 200 (:status receipt-resp))
                     (str "post metadata receipt" receipt-resp))
-                (is (= (assoc retrieved-metadata :kixi.datastore.metadatastore/description new-desc)
-                       receipt-resp))))))))))
+                (Thread/sleep 2000)
+                (let [[fetched-metadata s] (->result
+                                            (http/get (url (str "/api/files/" (::ms/id retrieved-metadata) "/metadata"))
+                                                      {:as :json
+                                                       :content-type :json
+                                                       :headers {:authorization (:auth-token auth)}}))]
+                  (is (= 200 s))
+                  (is-submap (assoc retrieved-metadata ::ms/description new-desc)
+                             fetched-metadata))))))))))
 
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"
