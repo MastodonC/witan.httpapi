@@ -76,7 +76,9 @@
       (nil? receipt)                                      [404 nil nil]
       (not= (:kixi.user/id receipt) (:kixi.user/id user)) [401 nil nil]
       (= "pending" (::spec/status receipt))               [202 nil nil]
-      :else [303 nil {"Location" (::spec/uri receipt)}])))
+      (and (= "complete" (::spec/status receipt))
+           (nil? (::spec/uri receipt)))                   [200 nil nil]
+      (= "complete" (::spec/status receipt))              [303 nil {"Location" (::spec/uri receipt)}])))
 
 (defn complete-receipt!
   [db id uri]
@@ -84,8 +86,8 @@
    db
    receipts-table
    {::spec/id id}
-   {::spec/uri uri
-    ::spec/status "complete"}
+   (merge {::spec/status "complete"}
+          (when uri {::spec/uri uri}))
    nil))
 
 (defn return-receipt
@@ -236,7 +238,7 @@
     (let [command-id (:kixi.comms.command/id event)]
       (when-let [receipt (retreive-receipt db command-id)]
         (let [file-id (:kixi.datastore.metadatastore/id payload)]
-          (complete-receipt! db command-id (str "/api/files/" file-id "/metadata")))))))
+          (complete-receipt! db command-id nil))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;

@@ -133,23 +133,42 @@
             (is-spec ::ms/sharing (::ms/sharing fetched-sharing))))
 
         (testing "Updating the file's metadata"
-          (let [new-desc "New description"
-                update-receipt-1 (post-metadata-update
-                                  auth (::ms/id retrieved-metadata)
-                                  {:kixi.datastore.metadatastore.update/description {:set new-desc}})]
-            (if-not (= 202 (:status update-receipt-1))
-              (is false (str "Receipt did not return 202: " update-receipt-1))
-              (let [receipt-resp (wait-for-receipt auth update-receipt-1)]
+          (let [new-desc (str "New description " (uuid))
+                new-name (str "New name " (uuid))
+                new-tags #{:foo :bar :baz}
+                new-maintainer "Bob"
+                new-license "Custom"
+                new-temporal-coverage-from "20170924T135604.949Z"
+                new-temporal-coverage-to   "20170925T135604.949Z"
+                update-params {:kixi.datastore.metadatastore.update/description {:set new-desc} ;; optional field
+                               :kixi.datastore.metadatastore.update/name {:set new-name} ;; mandatory field
+                               #_:kixi.datastore.metadatastore.update/tags #_{:conj new-tags}
+                               :kixi.datastore.metadatastore.update/maintainer {:set new-maintainer}
+                               :kixi.datastore.metadatastore.license.update/license {:kixi.datastore.metadatastore.license.update/type {:set new-license}}
+                               #_:kixi.datastore.metadatastore.time.update/time #_{:kixi.datastore.metadatastore.time.update/from
+                                                                                   {:set new-temporal-coverage-from}
+                                                                                   :kixi.datastore.metadatastore.time.update/to
+                                                                                   {:set new-temporal-coverage-to}}}
+                update-receipt (post-metadata-update
+                                auth (::ms/id retrieved-metadata) update-params)]
+            (if-not (= 202 (:status update-receipt))
+              (is false (str "Receipt did not return 202: " update-receipt))
+              (let [receipt-resp (wait-for-receipt auth update-receipt)]
                 (is (= 200 (:status receipt-resp))
                     (str "post metadata receipt" receipt-resp))
-                (Thread/sleep 2000)
-                (let [[fetched-metadata s] (->result
-                                            (http/get (url (str "/api/files/" (::ms/id retrieved-metadata) "/metadata"))
-                                                      {:as :json
-                                                       :content-type :json
-                                                       :headers {:authorization (:auth-token auth)}}))]
+
+                (Thread/sleep 4000) ;; eventual consistency, innit
+                (let [[fetched-metadata s] ((juxt :body :status)
+                                            (get-metadata auth (::ms/id retrieved-metadata)))]
                   (is (= 200 s))
-                  (is-submap (assoc retrieved-metadata ::ms/description new-desc)
+                  (is-submap (assoc retrieved-metadata
+                                    ::ms/description new-desc
+                                    ::ms/name new-name
+                                    ;;::ms/tags new-tags
+                                    ;;::ms/maintainer new-maintainer
+                                    :kixi.datastore.metadatastore/license {:kixi.datastore.metadatastore.license/type new-license}
+                                    #_:kixi.datastore.metadatastore/time #_{:kixi.datastore.metadatastore.time/from new-temporal-coverage-from
+                                                                            :kixi.datastore.metadatastore.time/to new-temporal-coverage-to})
                              fetched-metadata))))))))))
 
 (deftest file-errors-test

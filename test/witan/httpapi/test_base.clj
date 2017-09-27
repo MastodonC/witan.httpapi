@@ -197,6 +197,13 @@
           (is file-id)
           [uri file-id])))))
 
+(defn get-metadata
+  [auth id]
+  @(http/get (url (str "/api/files/" id "/metadata"))
+             {:as :json
+              :content-type :json
+              :headers {:authorization (:auth-token auth)}}))
+
 (defn put-metadata
   [auth metadata]
   @(http/put (url (str "/api/files/" (::ms/id metadata) "/metadata"))

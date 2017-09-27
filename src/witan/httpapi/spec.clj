@@ -76,12 +76,21 @@
                 ::kdmu/description]))
 
 (s/def ::file-metadata-put
-  (s/merge
-   ::file-metadata-post
-   (s/keys :req [::kdm/size-bytes
-                 ::kdm/file-type
-                 ::kdm/header
-                 ::kdm/name])))
+  (s/keys :req [::kdm/size-bytes
+                ::kdm/file-type
+                ::kdm/header
+                ::kdm/name]
+          :opt [::kdm-time/temporal-coverage
+                ::kdm-geography/geography
+                ::kdm/source-created
+                ::kdm/source-updated
+                ::kdm-license/license
+                ::kdm/tags
+                ::kdm/author
+                ::kdm/source
+                ::kdm/maintainer
+                ::kdm/name
+                ::kdm/description]))
 
 (s/def ::file-sharing
   (s/keys :req [::kdm/sharing]))
