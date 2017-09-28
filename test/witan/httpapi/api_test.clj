@@ -138,17 +138,20 @@
                 new-tags #{:foo :bar :baz}
                 new-maintainer "Bob"
                 new-license "Custom"
-                new-temporal-coverage-from "20170924T135604.949Z"
-                new-temporal-coverage-to   "20170925T135604.949Z"
+                new-source-updated "20170923"
+                new-temporal-coverage-from "20170924"
+                new-temporal-coverage-to   "20170925"
                 update-params {:kixi.datastore.metadatastore.update/description {:set new-desc} ;; optional field
                                :kixi.datastore.metadatastore.update/name {:set new-name} ;; mandatory field
-                               #_:kixi.datastore.metadatastore.update/tags #_{:conj new-tags}
+                               :kixi.datastore.metadatastore.update/tags {:conj new-tags}
+                               :kixi.datastore.metadatastore.update/source-updated {:set new-source-updated}
                                :kixi.datastore.metadatastore.update/maintainer {:set new-maintainer}
+
                                :kixi.datastore.metadatastore.license.update/license {:kixi.datastore.metadatastore.license.update/type {:set new-license}}
-                               #_:kixi.datastore.metadatastore.time.update/time #_{:kixi.datastore.metadatastore.time.update/from
-                                                                                   {:set new-temporal-coverage-from}
-                                                                                   :kixi.datastore.metadatastore.time.update/to
-                                                                                   {:set new-temporal-coverage-to}}}
+                               :kixi.datastore.metadatastore.time.update/temporal-coverage {:kixi.datastore.metadatastore.time.update/from
+                                                                                            {:set new-temporal-coverage-from}
+                                                                                            :kixi.datastore.metadatastore.time.update/to
+                                                                                            {:set new-temporal-coverage-to}}}
                 update-receipt (post-metadata-update
                                 auth (::ms/id retrieved-metadata) update-params)]
             (if-not (= 202 (:status update-receipt))
@@ -164,12 +167,14 @@
                   (is-submap (assoc retrieved-metadata
                                     ::ms/description new-desc
                                     ::ms/name new-name
-                                    ;;::ms/tags new-tags
-                                    ;;::ms/maintainer new-maintainer
-                                    :kixi.datastore.metadatastore/license {:kixi.datastore.metadatastore.license/type new-license}
-                                    #_:kixi.datastore.metadatastore/time #_{:kixi.datastore.metadatastore.time/from new-temporal-coverage-from
-                                                                            :kixi.datastore.metadatastore.time/to new-temporal-coverage-to})
-                             fetched-metadata))))))))))
+                                    ::ms/tags (sort (mapv name new-tags))
+                                    ::ms/source-updated new-source-updated
+                                    ::ms/maintainer new-maintainer
+                                    :kixi.datastore.metadatastore.license/license {:kixi.datastore.metadatastore.license/type new-license}
+                                    :kixi.datastore.metadatastore.time/temporal-coverage {:kixi.datastore.metadatastore.time/from new-temporal-coverage-from
+                                                                                          :kixi.datastore.metadatastore.time/to new-temporal-coverage-to})
+                             (update fetched-metadata
+                                     ::ms/tags sort)))))))))))
 
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"

@@ -202,6 +202,7 @@
   @(http/get (url (str "/api/files/" id "/metadata"))
              {:as :json
               :content-type :json
+              :throw-exceptions false
               :headers {:authorization (:auth-token auth)}}))
 
 (defn put-metadata
