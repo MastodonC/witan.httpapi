@@ -43,7 +43,10 @@
 
 (s/def ::id (api-spec sc/uuid? "string"))
 
-(s/def ::file-metadata
+;; We can't just use the spec from kixi.spec
+;; because it's a multimethod and swagger can't turn
+;; that into a describable data structure
+(s/def ::file-metadata-get
   (s/keys :req [::kdm/size-bytes
                 ::kdm/file-type
                 ::kdm/header
@@ -61,6 +64,8 @@
                 ::kdm/source-updated
                 ::kdm-time/temporal-coverage
                 ::kdm-geography/geography]))
+
+
 
 (s/def ::file-metadata-post
   (s/keys :opt [::kdmu-time/temporal-coverage
@@ -116,6 +121,8 @@
 (s/def ::created-at (api-spec sc/timestamp? "string"))
 (s/def ::last-updated-at sc/timestamp?)
 (s/def ::uri spec/string?)
+(s/def ::receipt-id (api-spec sc/uuid? "string"))
+(s/def ::receipt-id-container (s/keys :req-un [::receipt-id]))
 (s/def ::receipt
   (s/keys :req [::id
                 :kixi.user/id

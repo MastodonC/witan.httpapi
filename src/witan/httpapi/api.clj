@@ -122,7 +122,7 @@
 
       (POST "/upload" req
         :summary "Creates an upload address for a new file"
-        :return ::s/id
+        :return ::s/receipt-id-container
         (let [[s r headers] (activities/create-file-upload!
                              (activities req)
                              (user req))]
@@ -147,7 +147,7 @@
         (GET "/metadata" req
           :summary "Return metadata for a specific file"
           :path-params [id :- ::s/id]
-          :return ::s/file-metadata
+          :return ::s/file-metadata-get
           (let [[s r] (query/get-file-metadata (requester req) (:user req) id)]
             (if (success? s)
               (success s r)
@@ -157,7 +157,7 @@
           :summary "Create new metadata for a specific file"
           :path-params [id :- ::s/id]
           :body [metadata ::s/file-metadata-put]
-          :return ::s/id
+          :return ::s/receipt-id-container
           (let [[s r headers] (activities/create-metadata!
                                (activities req)
                                (user req)
@@ -171,7 +171,7 @@
           :summary "Update metadata for a specific file"
           :path-params [id :- ::s/id]
           :body [metadata-updates ::s/file-metadata-post]
-          :return ::s/id
+          :return ::s/receipt-id-container
           (let [[s r headers] (activities/update-metadata!
                                (activities req)
                                (user req)

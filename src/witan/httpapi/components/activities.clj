@@ -93,7 +93,7 @@
 (defn return-receipt
   [id]
   [202
-   {:receipt id}
+   {:receipt-id id}
    {"Location" (str "/receipts/" id)}])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
