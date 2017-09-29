@@ -5,7 +5,8 @@
             [com.gfredericks.schpec :as sh]
             [kixi.comms :as comms]
             [witan.httpapi.components.database :as database]
-            [witan.httpapi.spec :as spec]))
+            [witan.httpapi.spec :as spec]
+            [witan.httpapi.response-codes :refer :all]))
 
 (sh/alias 'command 'kixi.command)
 (sh/alias 'kdcs 'kixi.datastore.communication-specs)
@@ -73,12 +74,12 @@
   [act user id]
   (let [receipt (retreive-receipt (:database act) id)]
     (cond
-      (nil? receipt)                                      [404 nil nil]
-      (not= (:kixi.user/id receipt) (:kixi.user/id user)) [401 nil nil]
-      (= "pending" (::spec/status receipt))               [202 nil nil]
+      (nil? receipt)                                      [NOT_FOUND nil nil]
+      (not= (:kixi.user/id receipt) (:kixi.user/id user)) [UNAUTHORISED nil nil]
+      (= "pending" (::spec/status receipt))               [ACCEPTED nil nil]
       (and (= "complete" (::spec/status receipt))
-           (nil? (::spec/uri receipt)))                   [200 nil nil]
-      (= "complete" (::spec/status receipt))              [303 nil {"Location" (::spec/uri receipt)}])))
+           (nil? (::spec/uri receipt)))                   [OK nil nil]
+      (= "complete" (::spec/status receipt))              [SEE_OTHER nil {"Location" (::spec/uri receipt)}])))
 
 (defn complete-receipt!
   [db id uri]
@@ -92,7 +93,7 @@
 
 (defn return-receipt
   [id]
-  [202
+  [ACCEPTED
    {:receipt-id id}
    {"Location" (str "/receipts/" id)}])
 
@@ -127,9 +128,9 @@
   [act user id]
   (let [row (retreive-upload-link (:database act) id)]
     (cond
-      (nil? row)                                      [404 nil nil]
-      (not= (:kixi.user/id row) (:kixi.user/id user)) [401 nil nil]
-      :else [200 (select-keys row [::spec/uri :kixi.datastore.filestore/id]) nil])))
+      (nil? row)                                      [NOT_FOUND nil nil]
+      (not= (:kixi.user/id row) (:kixi.user/id user)) [UNAUTHORISED nil nil]
+      :else [OK (select-keys row [::spec/uri :kixi.datastore.filestore/id]) nil])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Metadata
@@ -187,8 +188,8 @@
   [act user error-id file-id]
   (let [row (retreive-error (:database act) error-id)]
     (if (and row (= (:kixi.datastore.filestore/id row) file-id))
-      [200 {:error row}]
-      [404 nil])))
+      [OK {:error row}]
+      [NOT_FOUND nil])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
