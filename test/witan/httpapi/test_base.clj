@@ -52,7 +52,7 @@
 
 (defn receipt-resp->receipt-url
   [receipt-resp]
-  (->> (get-in receipt-resp [:body :receipt])
+  (->> (get-in receipt-resp [:body :receipt-id])
        (str "/api/receipts/")
        url))
 

@@ -58,8 +58,8 @@
                 ::kdm/tags
                 ::kdm-license/license
                 ::kdm/author
-                ::kdm/source
                 ::kdm/maintainer
+                ::kdm/source
                 ::kdm/source-created
                 ::kdm/source-updated
                 ::kdm-time/temporal-coverage
@@ -101,7 +101,7 @@
   (s/keys :req [::kdm/sharing]))
 
 (s/def ::file-info
-  (s/merge ::file-metadata
+  (s/merge ::file-metadata-get
            ::file-sharing))
 
 (s/def ::metadata-update
