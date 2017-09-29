@@ -12,4 +12,4 @@ read output
 PROFILE=${profile:-$DEFAULT_PROFILE}
 OUTPUT=${output:-$DEFAULT_OUTPUT}
 
-cat ~/.aws/credentials | grep -noc "$PROFILE" | xargs echo "2 +" | bc | xargs head ~/.aws/credentials -n | tail -n 2 | awk '{print $NF}' | xargs printf 'AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s' > $OUTPUT
+head -n $(cat ~/.aws/credentials | grep -noc "$PROFILE" | xargs echo "2 +" | bc) ~/.aws/credentials  | tail -n 2 | awk '{print $NF}' | xargs printf 'AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s' > $OUTPUT
