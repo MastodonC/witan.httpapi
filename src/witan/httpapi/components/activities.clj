@@ -89,7 +89,8 @@
    {::spec/id id}
    (merge {::spec/status "complete"}
           (when uri {::spec/uri uri}))
-   nil))
+   nil)
+  nil)
 
 (defn return-receipt
   [id]
@@ -210,8 +211,7 @@
                              command-id
                              id
                              upload-link)
-        (complete-receipt! db command-id (str "/api/files/" id "/upload")))))
-  nil)
+        (complete-receipt! db command-id (str "/api/files/" id "/upload"))))))
 
 (defmethod on-event
   [:kixi.datastore.file-metadata/rejected "1.0.0"]
@@ -220,26 +220,23 @@
     (when-let [receipt (retreive-receipt db command-id)]
       (let [file-id (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/id])]
         (create-error! db command-id file-id (-> payload :reason name))
-        (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id)))))
-  nil)
+        (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id))))))
 
 (defmethod on-event
   [:kixi.datastore.file/created "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (let [command-id (:kixi.comms.command/id event)]
-    (when-let [receipt (retreive-receipt db command-id)]
+    (when (retreive-receipt db command-id)
       (let [file-id (:kixi.datastore.metadatastore/id payload)]
-        (complete-receipt! db command-id (str "/api/files/" file-id "/metadata")))))
-  nil)
+        (complete-receipt! db command-id (str "/api/files/" file-id "/metadata"))))))
 
 (defmethod on-event
   [:kixi.datastore.file-metadata/updated "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (when (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-update)
     (let [command-id (:kixi.comms.command/id event)]
-      (when-let [receipt (retreive-receipt db command-id)]
-        (let [file-id (:kixi.datastore.metadatastore/id payload)]
-          (complete-receipt! db command-id nil))))))
+      (when (retreive-receipt db command-id)
+        (complete-receipt! db command-id nil)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
