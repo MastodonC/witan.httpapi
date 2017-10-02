@@ -247,6 +247,6 @@
             (let [receipt-resp (wait-for-receipt auth resp)]
               (is (= 200 (:status receipt-resp))
                   "metadata receipt")
-              (is-submap metadata
-                         (:body receipt-resp))
-              (:body receipt-resp))))))))
+              (when-not (-> receipt-resp :body :error )
+                (is-submap metadata (:body receipt-resp))
+                (:body receipt-resp)))))))))

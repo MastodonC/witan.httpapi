@@ -14,12 +14,18 @@
    "user-id" id})
 
 (defn get-files-by-user
-  [requester user]
-  (requests/GET requester
-                :datastore
-                "/metadata"
-                {:query-params {:activity (mapv encode-kw [:kixi.datastore.metadatastore/meta-read])}
-                 :headers (user-header user)}))
+  [requester user {:keys [count index]}]
+  (let [[s r] (requests/GET requester
+                            :datastore
+                            "/metadata"
+                            {:query-params (merge {:activity (mapv encode-kw [:kixi.datastore.metadatastore/meta-read])}
+                                                  (when count {:count count})
+                                                  (when index {:index index}))
+                             :headers (user-header user)})
+        {:keys [items]} r]
+    [s (-> r
+           (assoc :files items)
+           (dissoc :items))]))
 
 (defn- get-file-info [requester user id]
   (requests/GET requester

@@ -115,8 +115,10 @@
 
       (GET "/" req
         :summary "Return a list of files the user has access to"
-        :return ::s/paged-items
-        (let [[s r] (query/get-files-by-user (requester req) (user req))]
+        :query-params [{count :- ::s/count nil}
+                       {index :- ::s/index nil}]
+        :return ::s/paged-metadata-items
+        (let [[s r] (query/get-files-by-user (requester req) (user req) {:count count :index index})]
           (if (success? s)
             (success s r)
             (fail s))))

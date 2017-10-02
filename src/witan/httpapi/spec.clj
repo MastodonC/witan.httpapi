@@ -116,6 +116,9 @@
 (s/def ::paging (s/keys :req-un [::total ::count ::index]))
 (s/def ::paged-items (s/keys :req-un [::items ::paging]))
 
+(s/def ::files (s/coll-of ::file-info))
+(s/def ::paged-metadata-items (s/keys :req-un [::files ::paging]))
+
 ;; Receipts
 (s/def ::status #{"pending" "complete" "error"})
 (s/def ::created-at (api-spec sc/timestamp? "string"))
