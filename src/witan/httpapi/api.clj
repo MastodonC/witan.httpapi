@@ -10,7 +10,8 @@
             [kixi.user :as user]
             ;;
             [witan.httpapi.components.auth :as auth]
-            [witan.httpapi.components.activities :as activities]))
+            [witan.httpapi.components.activities :as activities]
+            [witan.httpapi.response-codes :refer :all]))
 
 (defn auth
   [req]
@@ -38,7 +39,7 @@
 
 (defn success
   ([body]
-   (success 200 body))
+   (success OK body))
   ([status body]
    (success status body nil))
   ([status body headers]
@@ -49,13 +50,13 @@
 
 (defn success?
   [status]
-  (and (>= status 200)
-       (< status 400)))
+  (and (>= status OK)
+       (< status BAD_REQUEST)))
 
 (def not-found
   (context "/" []
     (ANY "/*" []
-      {:status 404
+      {:status NOT_FOUND
        :body "Not Found"})))
 
 (def healthcheck-routes
@@ -74,7 +75,7 @@
                     password :- ::user/password]
       :return ::user/token-pair-container
       (let [[status body] (auth/login (auth req) username password)]
-        (if (= status 201)
+        (if (= status CREATED)
           (success status body)
           (fail status body))))
 
@@ -83,7 +84,7 @@
       :body-params [token-pair :- ::user/token-pair]
       :return ::user/token-pair-container
       (let [[status body] (auth/refresh (auth req) token-pair)]
-        (if (= status 201)
+        (if (= status CREATED)
           (success status body)
           (fail status body))))))
 
@@ -127,7 +128,7 @@
                              (activities req)
                              (user req))]
           (if (success? s)
-            (success 202 r headers)
+            (success ACCEPTED r headers)
             (fail s))))
 
       (context "/:id" []
@@ -164,7 +165,7 @@
                                metadata
                                id)]
             (if (success? s)
-              (success 202 r headers)
+              (success ACCEPTED r headers)
               (fail s r))))
 
         (POST "/metadata" req
@@ -178,7 +179,7 @@
                                metadata-updates
                                id)]
             (if (success? s)
-              (success 202 r headers)
+              (success ACCEPTED r headers)
               (fail s))))
 
         (GET "/errors/:error-id" req

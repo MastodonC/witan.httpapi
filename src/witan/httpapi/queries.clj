@@ -1,5 +1,6 @@
 (ns witan.httpapi.queries
-  (:require [witan.httpapi.components.requests :as requests]))
+  (:require [witan.httpapi.components.requests :as requests]
+            [witan.httpapi.response-codes :refer :all]))
 
 (defn encode-kw
   [kw]
@@ -28,12 +29,12 @@
 
 (defn get-file-metadata [requester user id]
   (let [[status cds-response] (get-file-info requester user id)]
-    (if (= status 200)
+    (if (= status OK)
       [status (dissoc cds-response :kixi.datastore.metadatastore/sharing)]
       [status cds-response])))
 
 (defn get-file-sharing-info [requester user id]
   (let [[status cds-response] (get-file-info requester user id)]
-    (if (= status 200)
+    (if (= status OK)
       [status (select-keys cds-response [:kixi.datastore.metadatastore/sharing])]
       [status cds-response])))
