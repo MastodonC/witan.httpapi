@@ -45,12 +45,13 @@
     (is-valid-response r)
     (when (is (contains? r :token-pair))
       (let [[s r] (auth/refresh (auth) (:token-pair r))]
-        (is (= 201 s))
-        (is-valid-response r)))))
+        (when-created {:status s}
+          (is-valid-response r))))))
 
 (deftest authenticate-test
   (let [[s r] (auth/login (auth) "test@mastodonc.com" "Secret123")
         r (auth/authenticate (auth) (t/date-time 0) (-> r :token-pair :auth-token))]
-    (is (contains? r :kixi.user/id))
-    (is (contains? r :kixi.user/self-group))
-    (is (and (contains? r :kixi.user/groups) (not-empty (:kixi.user/groups r))))))
+    (when-created {:status s}
+      (is (contains? r :kixi.user/id))
+      (is (contains? r :kixi.user/self-group))
+      (is (and (contains? r :kixi.user/groups) (not-empty (:kixi.user/groups r)))))))
