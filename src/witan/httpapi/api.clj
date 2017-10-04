@@ -8,6 +8,8 @@
             [witan.httpapi.queries :as query]
             ;;
             [kixi.user :as user]
+            [kixi.group :as group]
+            [kixi.datastore.metadatastore :as kdm]
             ;;
             [witan.httpapi.components.auth :as auth]
             [witan.httpapi.components.activities :as activities]
@@ -208,10 +210,22 @@
               (fail s))))
 
         (POST "/sharing" req
-          :summary "Update sharing data for a specific file"
+          :summary "Add a group to the specified file with a particular permission"
           :path-params [id :- ::s/id]
-          ;;:return ::s/result
-          (ok "hello"))
+          :body-params [activity :- ::kdm/activity
+                        group-id :- ::group/id
+                        operation :- ::s/sharing-operation]
+          :return ::s/receipt-id-container
+          (let [[s r headers] (activities/update-sharing!
+                               (activities req)
+                               (user req)
+                               id
+                               operation
+                               activity
+                               group-id)]
+            (if (success? s)
+              (success ACCEPTED r headers)
+              (fail s))))
 
         (POST "/link" req
           :summary "Creates a download token for a specific file"

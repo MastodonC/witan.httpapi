@@ -17,7 +17,8 @@
             [kixi.datastore.filestore :as kdf]
             [kixi.datastore.metadatastore.update :as kdmu]
             [com.gfredericks.schpec :refer [alias]]
-            [kixi.user :as user]))
+            [kixi.user :as user]
+            [kixi.group :as group]))
 
 (alias 'kdmu-geography 'kixi.datastore.metadatastore.geography.update)
 (alias 'kdmu-license 'kixi.datastore.metadatastore.license.update)
@@ -108,6 +109,15 @@
   (s/merge (s/keys :req [::kdm/id])
            ::file-metadata-post))
 
+(s/def ::sharing-operation
+  #{"add" "remove"})
+
+(s/def ::sharing-command
+  (s/keys :req [::kdm/id
+                ::kdm/activity
+                ::kdm/sharing-update
+                ::group/id]))
+
 ;; Files
 (s/def ::total spec/int?)
 (s/def ::count spec/int?)
@@ -177,3 +187,8 @@
   [::kdm/update "1.0.0"]
   [_]
   ::metadata-update)
+
+(defmethod comms/command-payload
+  [::kdm/sharing-change "1.0.0"]
+  [_]
+  ::sharing-command)

@@ -83,6 +83,13 @@
   [r]
   (get-in r [:body :paging]))
 
+(defn upload-file-inline
+  []
+  (let [m (create-metadata file-name)
+        new-metadata (send-file-and-metadata auth file-name m)]
+    (when-not (and new-metadata (is-spec :witan.httpapi.spec/file-metadata-get new-metadata))
+      (throw (Exception. (str "Couldn't upload metadata: " new-metadata))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (use-fixtures :once start-system upload-new-file)
@@ -121,58 +128,46 @@
 
 (deftest swagger-test
   (let [r @(http/get (url "/swagger.json")
-                     {:throw-exceptions false
-                      :as :json})]
+                     (with-default-opts {}))]
     (when-success r
       (is (= "2.0" (-> r :body :swagger))))))
 
 (deftest get-files-test
   (let [auth (get-auth-tokens)
         r @(http/get (url "/api/files")
-                     {:as :json
-                      :content-type :json
-                      :headers {:authorization (:auth-token auth)}})]
+                     (with-default-opts
+                       {:headers {:authorization (:auth-token auth)}}))]
     (when-success r)
     (is-spec :witan.httpapi.spec/paged-metadata-items (:body r))))
 
 (deftest get-files-paging-test
   (let [auth (get-auth-tokens)
         r @(http/get (url "/api/files")
-                     {:as :json
-                      :throw-exceptions false
-                      :content-type :json
-                      :headers {:authorization (:auth-token auth)}})]
+                     (with-default-opts
+                       {:headers {:authorization (:auth-token auth)}}))]
     (when (= 1 (:total (get-paging r)))
       ;; upload a new metadata - so we know there's more than 1
-      (let [m (create-metadata file-name)
-            new-metadata (send-file-and-metadata auth file-name m)]
-        (when-not (and new-metadata (is-spec :witan.httpapi.spec/file-metadata-get new-metadata))
-          (throw (Exception. (str "Couldn't upload metadata: " new-metadata))))))
+      (upload-file-inline))
 
     (testing "Is the number of results being limited?"
       (let [r @(http/get (url "/api/files?count=1")
-                         {:as :json
-                          :throw-exceptions false
-                          :content-type :json
-                          :headers {:authorization (:auth-token auth)}})
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))
             {:keys [total count index]} (get-paging r)]
         (is (= 1 count))))
 
     (testing "Is the index being increased?"
       (let [r @(http/get (url "/api/files?index=1")
-                         {:as :json
-                          :throw-exceptions false
-                          :content-type :json
-                          :headers {:authorization (:auth-token auth)}})
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))
             {:keys [total count index]} (get-paging r)]
         (is (= 1 index))))))
 
 (deftest get-metadata-test
   (let [auth (get-auth-tokens)
         r @(http/get (url (str "/api/files/" @file-id "/metadata"))
-                     {:as :json
-                      :content-type :json
-                      :headers {:authorization (:auth-token auth)}})]
+                     (with-default-opts
+                       {:headers {:authorization (:auth-token auth)}}))]
 
     (when-success r
       (is-spec :witan.httpapi.spec/file-metadata-get (:body r)))))
@@ -180,9 +175,8 @@
 (deftest get-metadata-sharing-test
   (let [auth (get-auth-tokens)
         r @(http/get (url (str "/api/files/" @file-id "/sharing"))
-                     {:as :json
-                      :content-type :json
-                      :headers {:authorization (:auth-token auth)}})]
+                     (with-default-opts
+                       {:headers {:authorization (:auth-token auth)}}))]
     (when-success r
       (is-spec :witan.httpapi.spec/file-sharing (:body r)))))
 
@@ -238,3 +232,38 @@
         (when-success receipt-resp
           (is (= "file-not-exist"
                  (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))))
+
+(deftest sharing-update-test
+  (let [auth (get-auth-tokens)
+        new-grp (uuid)]
+    (testing "Adding a new group to the sharing properties of our file"
+      (let [r @(http/post (url (str "/api/files/" @file-id "/sharing"))
+                          (with-default-opts
+                            {:form-params {:activity ::ms/file-read
+                                           :operation "add"
+                                           :group-id new-grp}
+                             :headers {:authorization (:auth-token auth)}}))]
+        (when-accepted r
+          (let [receipt-resp (wait-for-receipt auth r)]
+            (when-success receipt-resp
+              (Thread/sleep 4000) ;; eventual consistency, innit
+              (let [sharing-r @(http/get (url (str "/api/files/" @file-id "/sharing"))
+                                         (with-default-opts
+                                           {:headers {:authorization (:auth-token auth)}}))]
+                (is (contains? (set (get-in sharing-r [:body ::ms/sharing ::ms/file-read])) new-grp))))))))
+
+    (testing "Removing a group from the sharing properties of our file"
+      (let [r @(http/post (url (str "/api/files/" @file-id "/sharing"))
+                          (with-default-opts
+                            {:form-params {:activity ::ms/file-read
+                                           :operation "remove"
+                                           :group-id new-grp}
+                             :headers {:authorization (:auth-token auth)}}))]
+        (when-accepted r
+          (Thread/sleep 4000) ;; eventual consistency, innit
+          (let [receipt-resp (wait-for-receipt auth r)]
+            (when-success receipt-resp
+              (let [sharing-r @(http/get (url (str "/api/files/" @file-id "/sharing"))
+                                         (with-default-opts
+                                           {:headers {:authorization (:auth-token auth)}}))]
+                (is (not (contains? (set (get-in sharing-r [:body ::ms/sharing ::ms/file-read])) new-grp)))))))))))

@@ -4,9 +4,11 @@
             [clojure.spec.alpha :as s]
             [com.gfredericks.schpec :as sh]
             [kixi.comms :as comms]
+            [kixi.spec.conformers :as sc]
             [witan.httpapi.components.database :as database]
             [witan.httpapi.spec :as spec]
-            [witan.httpapi.response-codes :refer :all]))
+            [witan.httpapi.response-codes :refer :all]
+            [kixi.datastore.metadatastore :as ms]))
 
 (sh/alias 'command 'kixi.command)
 (sh/alias 'kdcs 'kixi.datastore.communication-specs)
@@ -170,6 +172,25 @@
                           {:partition-key file-id})
     (return-receipt id)))
 
+(def sharing-ops
+  {"add" ::ms/sharing-conj
+   "remove" ::ms/sharing-disj})
+
+(defn update-sharing!
+  [{:keys [comms database]} user file-id op activity group-id]
+  (let [id (comms/uuid)]
+    (create-receipt! database user id)
+    (send-valid-command!* comms (merge {::command/id id
+                                        ::command/type :kixi.datastore.metadatastore/sharing-change
+                                        ::command/version "1.0.0"
+                                        :kixi/user user}
+                                       {:kixi.datastore.metadatastore/id file-id
+                                        :kixi.datastore.metadatastore/activity (s/conform sc/ns-keyword? activity)
+                                        :kixi.group/id group-id
+                                        :kixi.datastore.metadatastore/sharing-update (get sharing-ops op)})
+                          {:partition-key file-id})
+    (return-receipt id)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Errors
 
@@ -233,19 +254,31 @@
 (defmethod on-event
   [:kixi.datastore.file-metadata/updated "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
-  (when (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-update)
+  (cond
+    (or (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-update)
+        (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-sharing-updated))
     (let [command-id (:kixi.comms.command/id event)]
       (when (retreive-receipt db command-id)
         (complete-receipt! db command-id nil)))))
+
+(defmethod on-event
+  [:kixi.datastore.metadatastore/sharing-change-rejected "1.0.0"]
+  [db {:keys [kixi.comms.event/payload] :as event}]
+  (let [command-id (:kixi.comms.command/id event)]
+    (when-let [receipt (retreive-receipt db command-id)]
+      (let [file-id (get-in payload [:original :kixi.datastore.metadatastore/id])]
+        (create-error! db command-id file-id (-> payload :reason name))
+        (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id)))))  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 
 (def event-handlers
-  {:kixi.datastore.filestore/upload-link-created ["1.0.0" :witan-httpapi-activity-upload-file]
-   :kixi.datastore.file-metadata/rejected        ["1.0.0" :witan-httpapi-activity-file-metadata-rejected]
-   :kixi.datastore.file/created                  ["1.0.0" :witan-httpapi-activity-file-created]
-   :kixi.datastore.file-metadata/updated         ["1.0.0" :witan-httpapi-activity-metadata-updated]})
+  {:kixi.datastore.filestore/upload-link-created         ["1.0.0" :witan-httpapi-activity-upload-file]
+   :kixi.datastore.file-metadata/rejected                ["1.0.0" :witan-httpapi-activity-file-metadata-rejected]
+   :kixi.datastore.file/created                          ["1.0.0" :witan-httpapi-activity-file-created]
+   :kixi.datastore.file-metadata/updated                 ["1.0.0" :witan-httpapi-activity-metadata-updated]
+   :kixi.datastore.metadatastore/sharing-change-rejected ["1.0.0" :witan-httpapi-activity-sharing-change-rejected]})
 
 (defn event-data->handler
   [{:keys [comms database]} [type [version group]]]
