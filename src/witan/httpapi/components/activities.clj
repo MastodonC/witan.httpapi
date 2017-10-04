@@ -178,8 +178,7 @@
 
 (defn update-sharing!
   [{:keys [comms database]} user file-id op activity group-id]
-  (let [id (comms/uuid)
-        op' (get sharing-ops op)]
+  (let [id (comms/uuid)]
     (create-receipt! database user id)
     (send-valid-command!* comms (merge {::command/id id
                                         ::command/type :kixi.datastore.metadatastore/sharing-change
@@ -188,7 +187,7 @@
                                        {:kixi.datastore.metadatastore/id file-id
                                         :kixi.datastore.metadatastore/activity (s/conform sc/ns-keyword? activity)
                                         :kixi.group/id group-id
-                                        :kixi.datastore.metadatastore/sharing-update op'})
+                                        :kixi.datastore.metadatastore/sharing-update (get sharing-ops op)})
                           {:partition-key file-id})
     (return-receipt id)))
 

@@ -1,5 +1,5 @@
 (ns witan.httpapi.api
-  (:require [compojure.api.sweet :refer [context GET POST ANY PUT DELETE resource api]]
+  (:require [compojure.api.sweet :refer [context GET POST ANY PUT resource api]]
             [ring.util.http-response :refer [ok unauthorized]]
             [clj-time.core              :as t]
             [taoensso.timbre :as log]
