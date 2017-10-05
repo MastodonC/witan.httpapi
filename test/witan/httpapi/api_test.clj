@@ -221,6 +221,41 @@
                          (update (-> r :body)
                                  ::ms/tags sort)))))))))
 
+(deftest update-metadata-removal-test
+  (let [auth (get-auth-tokens)]
+    (let [update-receipt (post-metadata-update
+                          auth @file-id {:kixi.datastore.metadatastore.update/description "rm"})]
+      (when-accepted update-receipt
+        (let [receipt-resp (wait-for-receipt auth update-receipt)]
+          (when-success receipt-resp
+            (Thread/sleep 4000) ;; eventual consistency, innit
+            (let [r (get-metadata auth @file-id)]
+              (when-success r
+                (if (get-in r [:body :error])
+                  (is false (:body r))
+                  (is (not (contains? (:body r) ::ms/description))))))))))))
+
+(deftest update-metadata-invalid-1
+  (let [auth (get-auth-tokens)
+        r (post-metadata-update
+           auth (uuid) {:kixi.datastore.metadatastore.update/description "foo"})]
+    (is (= 400 (:status r)))))
+
+(deftest update-metadata-invalid-2
+  (let [auth (get-auth-tokens)
+        r (post-metadata-update
+           auth (uuid) {:kixi.datastore.metadatastore/name "Foobar"})]
+    (is (= 400 (:status r)))))
+
+(deftest update-metadata-file-no-exist
+  (let [auth (get-auth-tokens)
+        r (post-metadata-update
+           auth (uuid) {:kixi.datastore.metadatastore.update/description {:set "New desc2"}})]
+    (when-accepted r
+      (let [receipt-resp (wait-for-receipt auth r)]
+        (when-success receipt-resp
+          (is (= "unauthorised" (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))))
+
 (deftest file-errors-test
   "Trigger an error by trying to PUT metadata that doesn't exist"
   (let [auth (get-auth-tokens)
@@ -266,4 +301,16 @@
               (let [sharing-r @(http/get (url (str "/api/files/" @file-id "/sharing"))
                                          (with-default-opts
                                            {:headers {:authorization (:auth-token auth)}}))]
-                (is (not (contains? (set (get-in sharing-r [:body ::ms/sharing ::ms/file-read])) new-grp)))))))))))
+                (is (not (contains? (set (get-in sharing-r [:body ::ms/sharing ::ms/file-read])) new-grp)))))))))
+
+    (testing "Adding a new group to the sharing properties of a file that DOESN'T exist"
+      (let [r @(http/post (url (str "/api/files/" (uuid) "/sharing"))
+                          (with-default-opts
+                            {:form-params {:activity ::ms/file-read
+                                           :operation "add"
+                                           :group-id new-grp}
+                             :headers {:authorization (:auth-token auth)}}))]
+        (when-accepted r
+          (let [receipt-resp (wait-for-receipt auth r)]
+            (when-success receipt-resp
+              (is (= "unauthorised" (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))))))
