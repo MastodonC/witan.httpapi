@@ -160,7 +160,7 @@
                           {:partition-key file-id})
     (return-receipt id)))
 
-(defn- conform-metadata-updates
+(defn conform-metadata-updates
   "This fn attempts to heal any differences between specs across the applications"
   [m]
   (log/debug "Conforming metadata updates:" m)
@@ -173,15 +173,16 @@
   [{:keys [comms database]} user metadata-updates file-id]
   (if (empty? metadata-updates)
     [BAD_REQUEST {:error "Update can't be empty"} nil]
-    (let [id (comms/uuid)]
+    (let [id (comms/uuid)
+          update-payload (-> metadata-updates
+                             conform-metadata-updates
+                             (assoc :kixi.datastore.metadatastore/id file-id))]
       (create-receipt! database user id)
       (send-valid-command!* comms (merge {::command/id id
                                           ::command/type :kixi.datastore.metadatastore/update
                                           ::command/version "1.0.0"
                                           :kixi/user user}
-                                         (-> metadata-updates
-                                             conform-metadata-updates
-                                             (assoc :kixi.datastore.metadatastore/id file-id)))
+                                         update-payload)
                             {:partition-key file-id})
       (return-receipt id))))
 
