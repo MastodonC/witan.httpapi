@@ -294,9 +294,7 @@
          db
          command-id
          (create-error! db command-id file-id (-> payload :reason name)))
-        (let [e (str "Could't find a metadatastore ID in payload: " payload)]
-          (log/error e)
-          (throw (Exception. e))))))
+        (log/error "Could't find a metadatastore ID in payload:" payload))))
 
   (defmethod on-event
     [:kixi.datastore.metadatastore/sharing-change-rejected "1.0.0"]
@@ -308,9 +306,7 @@
            db
            command-id
            (create-error! db command-id file-id (-> payload :reason name)))
-          (let [e (str "Could't find a metadatastore ID in payload: " payload)]
-            (log/error e)
-            (throw (Exception. e))))))))
+          (log/error "Could't find a metadatastore ID in payload:" payload))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
