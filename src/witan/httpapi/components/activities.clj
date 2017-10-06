@@ -214,7 +214,8 @@
                     :kixi.datastore.filestore/id file-id
                     ::spec/created-at (comms/timestamp)
                     ::spec/reason reason}]
-    (database/put-item database file-errors-table spec-error nil)))
+    (database/put-item database file-errors-table spec-error nil)
+    (str "/api/files/" file-id "/errors/" id)))
 
 (defn- retreive-error
   [db id]
@@ -229,6 +230,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
+
+(defn get-metadatastore-id
+  [payload]
+  (or (get-in payload [::ms/id])
+      (get-in payload [:original ::ms/id])
+      (get-in payload [:original ::ms/payload :kixi.comms.command/payload ::ms/id])))
 
 (defmulti on-event
   (fn [_ {:keys [kixi.comms.event/key
@@ -254,8 +261,10 @@
   (let [command-id (:kixi.comms.command/id event)]
     (when-let [receipt (retreive-receipt db command-id)]
       (let [file-id (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/id])]
-        (create-error! db command-id file-id (-> payload :reason name))
-        (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id))))))
+        (complete-receipt!
+         db
+         command-id
+         (create-error! db command-id file-id (-> payload :reason name)))))))
 
 (defmethod on-event
   [:kixi.datastore.file/created "1.0.0"]
@@ -280,21 +289,24 @@
   [db {:keys [kixi.comms.event/payload] :as event}]
   (let [command-id (:kixi.comms.command/id event)]
     (when-let [receipt (retreive-receipt db command-id)]
-      (let [file-id (or (get-in payload [::ms/id])
-                        (get-in payload [:original ::ms/id])
-                        (get-in payload [:original ::ms/payload :kixi.comms.command/payload ::ms/id]))]
-        (create-error! db command-id file-id (-> payload :reason name))
-        (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id)))))  )
+      (if-let [file-id (get-metadatastore-id payload)]
+        (complete-receipt!
+         db
+         command-id
+         (create-error! db command-id file-id (-> payload :reason name)))
+        (log/error "Could't find a metadatastore ID in payload:" payload))))
 
-(defmethod on-event
-  [:kixi.datastore.metadatastore/sharing-change-rejected "1.0.0"]
-  [db {:keys [kixi.comms.event/payload] :as event}]
-  (let [command-id (:kixi.comms.command/id event)]
-    (when-let [receipt (retreive-receipt db command-id)]
-      (let [file-id (or (get-in payload [:kixi.datastore.metadatastore/id])
-                        (get-in payload [:original :kixi.datastore.metadatastore/id]))]
-        (create-error! db command-id file-id (-> payload :reason name))
-        (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id)))))  )
+  (defmethod on-event
+    [:kixi.datastore.metadatastore/sharing-change-rejected "1.0.0"]
+    [db {:keys [kixi.comms.event/payload] :as event}]
+    (let [command-id (:kixi.comms.command/id event)]
+      (when-let [receipt (retreive-receipt db command-id)]
+        (if-let [file-id (get-metadatastore-id payload)]
+          (complete-receipt!
+           db
+           command-id
+           (create-error! db command-id file-id (-> payload :reason name)))
+          (log/error "Could't find a metadatastore ID in payload:" payload))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
