@@ -247,6 +247,8 @@
             (let [receipt-resp (wait-for-receipt auth resp)]
               (is (= 200 (:status receipt-resp))
                   "metadata receipt")
-              (when-not (-> receipt-resp :body :error )
-                (is-submap metadata (:body receipt-resp))
-                (:body receipt-resp)))))))))
+              (if-not (-> receipt-resp :body :error)
+                (do
+                  (is-submap metadata (:body receipt-resp))
+                  (:body receipt-resp))
+                (println "Error was returned:" (-> receipt-resp :body :error) "\nIf error is `file-not-exist` it could be because the tests are running elsewhere.")))))))))

@@ -160,17 +160,31 @@
                           {:partition-key file-id})
     (return-receipt id)))
 
+(defn conform-metadata-updates
+  "This fn attempts to heal any differences between specs across the applications"
+  [m]
+  (log/debug "Conforming metadata updates:" m)
+  (let [m' (reduce-kv (fn [a k v]
+                        (assoc a k (s/unform k (s/conform k v)))) {} m)]
+    (log/debug "Conformed metadata updates:" m')
+    m'))
+
 (defn update-metadata!
   [{:keys [comms database]} user metadata-updates file-id]
-  (let [id (comms/uuid)]
-    (create-receipt! database user id)
-    (send-valid-command!* comms (merge {::command/id id
-                                        ::command/type :kixi.datastore.metadatastore/update
-                                        ::command/version "1.0.0"
-                                        :kixi/user user}
-                                       (assoc metadata-updates :kixi.datastore.metadatastore/id file-id))
-                          {:partition-key file-id})
-    (return-receipt id)))
+  (if (empty? metadata-updates)
+    [BAD_REQUEST {:error "Update can't be empty"} nil]
+    (let [id (comms/uuid)
+          update-payload (-> metadata-updates
+                             conform-metadata-updates
+                             (assoc :kixi.datastore.metadatastore/id file-id))]
+      (create-receipt! database user id)
+      (send-valid-command!* comms (merge {::command/id id
+                                          ::command/type :kixi.datastore.metadatastore/update
+                                          ::command/version "1.0.0"
+                                          :kixi/user user}
+                                         update-payload)
+                            {:partition-key file-id})
+      (return-receipt id))))
 
 (def sharing-ops
   {"add" ::ms/sharing-conj
@@ -200,7 +214,8 @@
                     :kixi.datastore.filestore/id file-id
                     ::spec/created-at (comms/timestamp)
                     ::spec/reason reason}]
-    (database/put-item database file-errors-table spec-error nil)))
+    (database/put-item database file-errors-table spec-error nil)
+    (str "/api/files/" file-id "/errors/" id)))
 
 (defn- retreive-error
   [db id]
@@ -215,6 +230,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
+
+(defn get-metadatastore-id
+  [payload]
+  (or (get-in payload [::ms/id])
+      (get-in payload [:original ::ms/id])
+      (get-in payload [:original ::ms/payload :kixi.comms.command/payload ::ms/id])))
 
 (defmulti on-event
   (fn [_ {:keys [kixi.comms.event/key
@@ -240,8 +261,10 @@
   (let [command-id (:kixi.comms.command/id event)]
     (when-let [receipt (retreive-receipt db command-id)]
       (let [file-id (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/id])]
-        (create-error! db command-id file-id (-> payload :reason name))
-        (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id))))))
+        (complete-receipt!
+         db
+         command-id
+         (create-error! db command-id file-id (-> payload :reason name)))))))
 
 (defmethod on-event
   [:kixi.datastore.file/created "1.0.0"]
@@ -262,13 +285,28 @@
         (complete-receipt! db command-id nil)))))
 
 (defmethod on-event
-  [:kixi.datastore.metadatastore/sharing-change-rejected "1.0.0"]
+  [:kixi.datastore.metadatastore/update-rejected "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (let [command-id (:kixi.comms.command/id event)]
     (when-let [receipt (retreive-receipt db command-id)]
-      (let [file-id (get-in payload [:original :kixi.datastore.metadatastore/id])]
-        (create-error! db command-id file-id (-> payload :reason name))
-        (complete-receipt! db command-id (str "/api/files/" file-id "/errors/" command-id)))))  )
+      (if-let [file-id (get-metadatastore-id payload)]
+        (complete-receipt!
+         db
+         command-id
+         (create-error! db command-id file-id (-> payload :reason name)))
+        (log/error "Could't find a metadatastore ID in payload:" payload))))
+
+  (defmethod on-event
+    [:kixi.datastore.metadatastore/sharing-change-rejected "1.0.0"]
+    [db {:keys [kixi.comms.event/payload] :as event}]
+    (let [command-id (:kixi.comms.command/id event)]
+      (when-let [receipt (retreive-receipt db command-id)]
+        (if-let [file-id (get-metadatastore-id payload)]
+          (complete-receipt!
+           db
+           command-id
+           (create-error! db command-id file-id (-> payload :reason name)))
+          (log/error "Could't find a metadatastore ID in payload:" payload))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -278,6 +316,7 @@
    :kixi.datastore.file-metadata/rejected                ["1.0.0" :witan-httpapi-activity-file-metadata-rejected]
    :kixi.datastore.file/created                          ["1.0.0" :witan-httpapi-activity-file-created]
    :kixi.datastore.file-metadata/updated                 ["1.0.0" :witan-httpapi-activity-metadata-updated]
+   :kixi.datastore.metadatastore/update-rejected         ["1.0.0" :witan-httpapi-activity-metadata-update-rejected]
    :kixi.datastore.metadatastore/sharing-change-rejected ["1.0.0" :witan-httpapi-activity-sharing-change-rejected]})
 
 (defn event-data->handler

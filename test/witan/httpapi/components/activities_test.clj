@@ -5,7 +5,9 @@
             [witan.httpapi.mocks :as mocks]
             [witan.httpapi.spec :as spec]
             [com.stuartsierra.component :as component]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]))
 
 (def sys (atom nil))
 
@@ -73,3 +75,10 @@
         (is (= "foobar" (get-in b [:error ::spec/reason])))
         (is (= fid (get-in b [:error :kixi.datastore.filestore/id]))))) ;; still pending
     ))
+
+(deftest conform-metadata-updates-test
+  (let [test-fn (fn [p]
+                  (let [cnfmd (conform-metadata-updates p)]
+                    (is p)
+                    (is (every? #(not (string? %)) (vals cnfmd)))))]
+    (run! test-fn (gen/sample (s/gen ::spec/file-metadata-post) 100))))
