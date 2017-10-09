@@ -61,6 +61,7 @@
   []
   (let [[r s] (login)]
     (is (= 201 s) (prn-str r))
+    (is-spec ::user/token-pair-container r)
     (:token-pair r)))
 
 (def file-id (atom nil))
