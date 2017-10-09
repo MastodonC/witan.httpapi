@@ -85,7 +85,7 @@
   (get-in r [:body :paging]))
 
 (defn upload-file-inline
-  []
+  [auth]
   (let [m (create-metadata file-name)
         new-metadata (send-file-and-metadata auth file-name m)]
     (when-not (and new-metadata (is-spec :witan.httpapi.spec/file-metadata-get new-metadata))
@@ -148,7 +148,7 @@
                        {:headers {:authorization (:auth-token auth)}}))]
     (when (= 1 (:total (get-paging r)))
       ;; upload a new metadata - so we know there's more than 1
-      (upload-file-inline))
+      (upload-file-inline auth))
 
     (testing "Is the number of results being limited?"
       (let [r @(http/get (url "/api/files?count=1")
