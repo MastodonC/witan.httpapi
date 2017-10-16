@@ -56,6 +56,7 @@
                 ::kdm/type
                 ::kdm/provenance]
           :opt [::kdm/description
+                ::kdm/logo
                 ::kdm/tags
                 ::kdm-license/license
                 ::kdm/author
@@ -79,7 +80,8 @@
                 ::kdmu/source
                 ::kdmu/maintainer
                 ::kdmu/name
-                ::kdmu/description]))
+                ::kdmu/description
+                ::kdmu/logo]))
 
 (s/def ::file-metadata-put
   (s/keys :req [::kdm/size-bytes
@@ -96,7 +98,8 @@
                 ::kdm/source
                 ::kdm/maintainer
                 ::kdm/name
-                ::kdm/description]))
+                ::kdm/description
+                ::kdm/logo]))
 
 (s/def ::file-sharing
   (s/keys :req [::kdm/sharing]))
