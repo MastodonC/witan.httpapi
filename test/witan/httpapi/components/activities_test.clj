@@ -49,16 +49,38 @@
   (let [user (random-user)
         id (uuid)
         fid (uuid)]
-    (let [[s _ _] (get-upload-link-response (activities) user (uuid))]
+    (let [[s _ _] (get-upload-link-response (activities) user (uuid) (uuid))]
       (is (= 404 s))) ;; not yet created
     ;;
     (create-upload-link! (:database (activities)) user id fid "/foo/bar")
-    (let [[s b _] (get-upload-link-response (activities) user fid)]
+    (let [[s b _] (get-upload-link-response (activities) user fid id)]
       (is (= 200 s))
       (is (= "/foo/bar" (::spec/uri b)))
       (is (= fid (:kixi.datastore.filestore/id b)))) ;; still pending
     ;;
-    (let [[s _ _] (get-upload-link-response (activities) (assoc user :kixi.user/id (uuid)) fid)]
+    (let [[s _ _] (get-upload-link-response (activities) (assoc user :kixi.user/id (uuid)) (uuid) id)]
+      (is (= 404 s)))
+    ;;
+    (let [[s _ _] (get-upload-link-response (activities) (assoc user :kixi.user/id (uuid)) fid id)]
+      (is (= 401 s)))))
+
+(deftest get-download-link-response-test
+  (let [user (random-user)
+        id (uuid)
+        fid (uuid)]
+    (let [[s _ _] (get-download-link-response (activities) user (uuid) (uuid))]
+      (is (= 404 s))) ;; not yet created
+    ;;
+    (create-download-link! (:database (activities)) user id fid "/foo/bar")
+    (let [[s b _] (get-download-link-response (activities) user fid id)]
+      (is (= 200 s))
+      (is (= "/foo/bar" (::spec/uri b)))
+      (is (= fid (:kixi.datastore.filestore/id b)))) ;; still pending
+    ;;
+    (let [[s _ _] (get-download-link-response (activities) (assoc user :kixi.user/id (uuid)) (uuid) id)]
+      (is (= 404 s)))
+    ;;
+    (let [[s _ _] (get-download-link-response (activities) (assoc user :kixi.user/id (uuid)) fid id)]
       (is (= 401 s)))))
 
 (deftest get-error-response-test
