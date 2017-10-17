@@ -80,7 +80,7 @@
 
 (defn get-receipt-response
   [act user id]
-  (let [receipt (retreive-receipt (:database act) id)]
+  (let [receipt (retrieve-receipt (:database act) id)]
     (cond
       (nil? receipt)                                      [NOT_FOUND nil nil]
       (not= (:kixi.user/id receipt) (:kixi.user/id user)) [UNAUTHORISED nil nil]
@@ -298,7 +298,7 @@
   [:kixi.datastore.filestore/upload-link-created "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (let [command-id (:kixi.comms.command/id event)]
-    (when-let [receipt (retreive-receipt db command-id)]
+    (when-let [receipt (retrieve-receipt db command-id)]
       (let [{:keys [kixi.datastore.filestore/upload-link
                     kixi.datastore.filestore/id]} payload]
         (complete-receipt!
@@ -313,7 +313,7 @@
   [:kixi.datastore.file-metadata/rejected "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (let [command-id (:kixi.comms.command/id event)]
-    (when-let [receipt (retreive-receipt db command-id)]
+    (when-let [receipt (retrieve-receipt db command-id)]
       (let [file-id (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/id])]
         (complete-receipt!
          db
@@ -324,7 +324,7 @@
   [:kixi.datastore.file/created "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (let [command-id (:kixi.comms.command/id event)]
-    (when (retreive-receipt db command-id)
+    (when (retrieve-receipt db command-id)
       (let [file-id (:kixi.datastore.metadatastore/id payload)]
         (complete-receipt! db command-id (str "/api/files/" file-id "/metadata"))))))
 
@@ -335,14 +335,14 @@
     (or (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-update)
         (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-sharing-updated))
     (let [command-id (:kixi.comms.command/id event)]
-      (when (retreive-receipt db command-id)
+      (when (retrieve-receipt db command-id)
         (complete-receipt! db command-id nil)))))
 
 (defmethod on-event
   [:kixi.datastore.metadatastore/update-rejected "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (let [command-id (:kixi.comms.command/id event)]
-    (when-let [receipt (retreive-receipt db command-id)]
+    (when-let [receipt (retrieve-receipt db command-id)]
       (if-let [file-id (get-metadatastore-id payload)]
         (complete-receipt!
          db
@@ -354,7 +354,7 @@
   [:kixi.datastore.metadatastore/sharing-change-rejected "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (let [command-id (:kixi.comms.command/id event)]
-    (when-let [receipt (retreive-receipt db command-id)]
+    (when-let [receipt (retrieve-receipt db command-id)]
       (if-let [file-id (get-metadatastore-id payload)]
         (complete-receipt!
          db
