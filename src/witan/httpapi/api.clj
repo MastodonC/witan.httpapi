@@ -137,14 +137,16 @@
 
       (context "/:id" []
 
-        (GET "/upload" req
+        (GET "/upload/:upload-id" req
           :summary "Return details of an upload request"
-          :path-params [id :- ::s/id]
+          :path-params [id :- ::s/id
+                        upload-id :- ::s/id]
           :return ::s/upload-link-response
           (let [[s r headers] (activities/get-upload-link-response
                                (activities req)
                                (user req)
-                               id)]
+                               id
+                               upload-id)]
             (if (success? s)
               (success s r headers)
               (fail s))))
@@ -230,15 +232,28 @@
         (POST "/link" req
           :summary "Creates a download token for a specific file"
           :path-params [id :- ::s/id]
-          ;;:return ::s/result
-          (ok "hello"))
+          (let [[s r headers] (activities/create-file-download!
+                               (activities req)
+                               (user req)
+                               (requester req)
+                               id)]
+            (if (success? s)
+              (success ACCEPTED r headers)
+              (fail s))))
 
         (GET "/link/:link-id" req
-          :summary "Return a download address for a specific file and token"
+          :summary "Returns a specific download token for a specific file"
           :path-params [id :- ::s/id
                         link-id :- ::s/id]
-          ;;:return ::s/result
-          (ok "hello"))))))
+          :return ::s/download-link-response
+          (let [[s r headers] (activities/get-download-link-response
+                               (activities req)
+                               (user req)
+                               id
+                               link-id)]
+            (if (success? s)
+              (success s r headers)
+              (fail s))))))))
 
 (def handler
   (api

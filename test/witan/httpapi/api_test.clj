@@ -269,6 +269,19 @@
           (is (= "file-not-exist"
                  (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))))
 
+(deftest file-download-test
+  (let [auth (get-auth-tokens)]
+    (testing "Download a file based on file-id."
+      (let [receipt-resp @(http/post (url (str "/api/files/" @file-id "/link"))
+                                     (with-default-opts
+                                       {:headers {:authorization (:auth-token auth)}
+                                        :redirect-strategy :none
+                                        :follow-redirects false}))]
+        (when-accepted  receipt-resp
+          (let [receipt-resp (wait-for-receipt auth receipt-resp)]
+            (when-success receipt-resp
+              (is-spec ::s/download-link-response (:body receipt-resp)))))))))
+
 (deftest sharing-update-test
   (let [auth (get-auth-tokens)
         new-grp (uuid)]

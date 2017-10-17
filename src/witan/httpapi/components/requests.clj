@@ -5,7 +5,9 @@
             [aleph.http.client-middleware :refer [parse-transit]]))
 
 (defprotocol Request
+  (GET* [this service route opts])
   (GET [this service route opts])
+  (POST* [this service route opts])
   (POST [this service route opts]))
 
 (defn build-route
@@ -22,16 +24,20 @@
 
 (defrecord HttpRequester [directory]
   Request
-  (GET [this service route opts]
+  (GET* [this service route opts]
     (let [full-route (build-route (get directory service) route)]
       (log/debug "GET request sent to" service full-route)
-      (let [{:keys [body status]} @(http/get full-route (add-default-opts opts))]
-        [status body])))
-  (POST [this service route opts]
+      @(http/get full-route (add-default-opts opts))))
+  (GET [this service route opts]
+    (let [{:keys [body status]} (GET* this service route opts)]
+      [status body]))
+  (POST* [this service route opts]
     (let [full-route (build-route (get directory service) route)]
       (log/debug "POST request sent to" service full-route)
-      (let [{:keys [body status]} @(http/post full-route (add-default-opts opts))]
-        [status body])))
+      @(http/post full-route (add-default-opts opts))))
+  (POST [this service route opts]
+    (let [{:keys [body status]} (POST* this service route opts)]
+      [status body]))
 
   component/Lifecycle
   (start [component]

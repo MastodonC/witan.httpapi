@@ -163,6 +163,17 @@
   (s/keys :req [::kdf/id
                 ::uri]))
 
+;; Download link
+(s/def ::download-link
+  (s/keys :req [::id
+                ::kdf/id
+                ::created-at
+                ::uri]))
+
+(s/def ::download-link-response
+  (s/keys :req [::kdf/id
+                ::uri]))
+
 ;; Errors
 (s/def ::reason string?)
 (s/def ::error

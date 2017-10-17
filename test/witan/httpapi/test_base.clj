@@ -11,7 +11,7 @@
 
 (def profile (keyword (env :system-profile "test")))
 
-(def wait-tries (Integer/parseInt (env :wait-tries "200")))
+(def wait-tries (Integer/parseInt (env :wait-tries "120")))
 (def wait-per-try (Integer/parseInt (env :wait-per-try "500")))
 (def wait-emit-msg (Integer/parseInt (env :wait-emit-msg "5000")))
 (def every-count-tries-emit (int (/ wait-emit-msg wait-per-try)))
@@ -52,9 +52,11 @@
 
 (defn receipt-resp->receipt-url
   [receipt-resp]
-  (->> (get-in receipt-resp [:body :receipt-id])
-       (str "/api/receipts/")
-       url))
+  (if (map? receipt-resp)
+    (->> (get-in receipt-resp [:body :receipt-id])
+         (str "/api/receipts/")
+         url)
+    (throw (Exception. "Not a map!"))))
 
 (defn wait-for-receipt
   ([auth receipt-resp]
