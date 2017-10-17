@@ -74,7 +74,7 @@
                       ::spec/last-updated-at (comms/timestamp)}]
     (database/put-item database receipts-table spec-receipt nil)    ))
 
-(defn- retreive-receipt
+(defn- retrieve-receipt
   [db id]
   (database/get-item db receipts-table {::spec/id id} nil))
 
