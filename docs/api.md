@@ -20,6 +20,11 @@ https://api.witanforcities.com/healthcheck
 
 ## Authentication and Tokens
 
+All calls to the API require authorisation based on your Witan login. You will receive an `auth-token` that will be used against subsequent API calls and a refresh token.
+
+If the authorisation token is unused for longer than 30 minutes you will be required to refresh your token using the `/api/refresh` endpoint.
+
+
 ## Files
 
 ## Uploads
@@ -32,6 +37,6 @@ https://api.witanforcities.com/healthcheck
 
 ## Errors
 
-## Sharing
+## Sharing
 
 ## Links
