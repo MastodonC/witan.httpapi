@@ -55,12 +55,6 @@
   (and (>= status OK)
        (< status BAD_REQUEST)))
 
-(def not-found
-  (context "/" []
-    (ANY "/*" []
-      {:status NOT_FOUND
-       :body "Not Found"})))
-
 (def healthcheck-routes
   (context "/" []
     (GET "/healthcheck" []
@@ -265,5 +259,4 @@
             :tags [{:name "api", :description "API routes for Witan"}]}}}
    healthcheck-routes
    auth-routes
-   api-routes
-   not-found))
+   api-routes))

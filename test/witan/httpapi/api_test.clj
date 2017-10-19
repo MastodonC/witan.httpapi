@@ -102,11 +102,6 @@
     (when-success r
       (is (= "hello" (-> r :body slurp))))))
 
-(deftest noexist-404-test
-  (let [r @(http/get (url "/notexist")
-                     {:throw-exceptions false})]
-    (is (= 404 (:status r)))))
-
 ;; Currently doesn't pass and there doesn't appear to be a
 ;; nice way to achieve this
 #_(deftest nomethod-405-test
