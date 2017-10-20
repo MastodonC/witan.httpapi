@@ -1,6 +1,6 @@
 (ns witan.httpapi.api
-  (:require [compojure.api.sweet :refer [context GET POST ANY PUT resource api]]
-            [ring.util.http-response :refer [ok unauthorized]]
+  (:require [compojure.api.sweet :refer :all]
+            [ring.util.http-response :refer [ok unauthorized not-found]]
             [clj-time.core              :as t]
             [taoensso.timbre :as log]
             ;;
@@ -55,16 +55,21 @@
   (and (>= status OK)
        (< status BAD_REQUEST)))
 
-(def not-found
-  (context "/" []
-    (ANY "/*" []
-      {:status NOT_FOUND
-       :body "Not Found"})))
-
 (def healthcheck-routes
   (context "/" []
     (GET "/healthcheck" []
       (str "hello"))))
+
+(def not-found-routes
+  (let [not-found-resp (not-found "Not Found")]
+    (context "/" []
+             (GET "/*" [] not-found-resp)
+             (HEAD "/*" [] not-found-resp)
+             (PATCH "/*" [] not-found-resp)
+             (DELETE "/*" [] not-found-resp)
+             (OPTIONS "/*" [] not-found-resp)
+             (POST "/*" [] not-found-resp)
+             (PUT "/*" [] not-found-resp))))
 
 (def auth-routes
   (context "/api" []
@@ -266,4 +271,4 @@
    healthcheck-routes
    auth-routes
    api-routes
-   not-found))
+   not-found-routes))

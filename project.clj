@@ -4,7 +4,7 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha17"]
+  :dependencies [[org.clojure/clojure "1.9.0-beta2"]
                  [com.cognitect/transit-clj "0.8.290"]
                  [com.stuartsierra/component "0.3.1"]
                  [com.taoensso/timbre "4.7.4"]
@@ -14,8 +14,8 @@
                  [aero "1.1.2"]
                  [com.gfredericks/schpec "0.1.2"]
                  [spootnik/signal "0.2.1"]
-                 [metosin/compojure-api "2.0.0-alpha7"]
-                 [metosin/spec-tools "0.3.2"]
+                 [metosin/spec-tools "0.5.0"]
+                 [metosin/compojure-api "2.0.0-alpha9" :exclusions [metosin/spec-tools]]
                  [kixi/kixi.spec "0.1.7"]
                  [kixi/kixi.comms "0.2.21"]
                  [kixi/kixi.log "0.1.4"]

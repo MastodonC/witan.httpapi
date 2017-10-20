@@ -14,3 +14,5 @@ For running local tests you will need to run the following:
 docker-compose up -d
 ./scripts/heimdall_tunnel.sh <path/to/access/pem>
 ```
+
+Copyright 2017 Mastodon C

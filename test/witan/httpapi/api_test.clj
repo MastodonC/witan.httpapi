@@ -103,9 +103,9 @@
       (is (= "hello" (-> r :body slurp))))))
 
 (deftest noexist-404-test
-  (let [r @(http/get (url "/notexist")
+  (let [r @(http/get (url "/no-exist")
                      {:throw-exceptions false})]
-    (is (= 404 (:status r)))))
+    (is (= 404 (:status r)) (prn r))))
 
 ;; Currently doesn't pass and there doesn't appear to be a
 ;; nice way to achieve this
@@ -138,8 +138,8 @@
         r @(http/get (url "/api/files")
                      (with-default-opts
                        {:headers {:authorization (:auth-token auth)}}))]
-    (when-success r)
-    (is-spec :witan.httpapi.spec/paged-metadata-items (:body r))))
+    (when-success r
+      (is-spec :witan.httpapi.spec/paged-metadata-items (:body r)))))
 
 (deftest get-files-paging-test
   (let [auth (get-auth-tokens)
