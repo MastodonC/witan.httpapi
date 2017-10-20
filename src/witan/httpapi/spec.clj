@@ -129,8 +129,7 @@
 (s/def ::paging (s/keys :req-un [::total ::count ::index]))
 (s/def ::paged-items (s/keys :req-un [::items ::paging]))
 
-#_(s/def ::files (s/coll-of ::file-info))
-(s/def ::files (s/coll-of (s/keys)))
+(s/def ::files (s/coll-of ::file-info))
 (s/def ::paged-metadata-items (s/keys :req-un [::files ::paging]))
 
 ;; Receipts
