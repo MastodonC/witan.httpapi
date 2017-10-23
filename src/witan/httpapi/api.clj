@@ -63,13 +63,7 @@
 (def not-found-routes
   (let [not-found-resp (not-found "Not Found")]
     (context "/" []
-             (GET "/*" [] not-found-resp)
-             (HEAD "/*" [] not-found-resp)
-             (PATCH "/*" [] not-found-resp)
-             (DELETE "/*" [] not-found-resp)
-             (OPTIONS "/*" [] not-found-resp)
-             (POST "/*" [] not-found-resp)
-             (PUT "/*" [] not-found-resp))))
+             (ANY "/*" [] not-found-resp))))
 
 (def auth-routes
   (context "/api" []
@@ -237,6 +231,7 @@
         (POST "/link" req
           :summary "Creates a download token for a specific file"
           :path-params [id :- ::s/id]
+          :return ::s/receipt-id-container
           (let [[s r headers] (activities/create-file-download!
                                (activities req)
                                (user req)
