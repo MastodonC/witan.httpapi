@@ -237,6 +237,7 @@
         (POST "/link" req
           :summary "Creates a download token for a specific file"
           :path-params [id :- ::s/id]
+          :return ::s/receipt-id-container
           (let [[s r headers] (activities/create-file-download!
                                (activities req)
                                (user req)
