@@ -62,6 +62,26 @@ curl -X POST --header 'Content-Type: application/json' --header 'Accept: applica
 }
 ```
 
+## How the receipt mechanism works.
+
+The Witan API is based on an asynchronus system. For aspects like uploads for example the API will issue you a receipt id. You are expected to use this receipt along with your auth token to query the API until the action is complete.
+
+For example: you want to upload a file, once you've authenticated your user and have an auth token you will then call `/api/files/upload` with your auth token as a header. In response the API will send back a `receipt-id` value and a 202 response code. 
+
+While Witan processes your file upload request you are expected to use the endpoint `/api/receipts/[receipt-id]` to see if your upload request url is ready. If Witan has successfully processed created an upload link you will receive a 200 response code along with upload link and filestore id. 
+
+Once you have a 200 response and the required url/id combination you can safely upload your file. 
+
+## How to upload a file.
+
+The file upload aspect of the Witan API is not uploading files in the traditional sense. The API provides a mechanism to generate a URL and file id to upload a file to. The actual uploading of the file, and how that is executed, is up to you. 
+
+
+
+## How to download a file.
+
+
+## How to share a file with another user.
 
 
 # Known Issues
