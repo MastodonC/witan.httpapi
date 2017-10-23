@@ -15,7 +15,7 @@
                  [com.gfredericks/schpec "0.1.2"]
                  [spootnik/signal "0.2.1"]
                  [metosin/spec-tools "0.5.0"]
-                 [metosin/compojure-api "2.0.0-alpha9" :exclusions [metosin/spec-tools]]
+                 [metosin/compojure-api "2.0.0-alpha10" :exclusions [metosin/spec-tools]]
                  [kixi/kixi.spec "0.1.7"]
                  [kixi/kixi.comms "0.2.21"]
                  [kixi/kixi.log "0.1.4"]
