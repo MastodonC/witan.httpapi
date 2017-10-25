@@ -125,6 +125,7 @@ The minimum information for file metadata is:
 ```
 
 #### Programatically finding the size of your file.
+
 You are required to know the size of your file in bytes, for example if you were using the statistical language R for example you would use the `file.size()` command:
 
 ```
@@ -162,12 +163,12 @@ Once you have your metadata json then do a PUT to `/api/files/[file-id]/metadata
 
 ```
 curl -X PUT --header 'Content-Type: application/json' \
-  --header 'Accept: application/json' 
-  --header 'authorization: eyJhb....FdB24Pg' 
-  -d '{"kixi.datastore.metadatastore/header":false, 
-       "kixi.datastore.metadatastore/size-bytes":13856, 
-       "kixi.datastore.metadatastore/name":"my_uploaded_file.xml", 
-       "kixi.datastore.metadatastore/file-type":"XML"}' 
+  --header 'Accept: application/json' \
+  --header 'authorization: eyJhb....FdB24Pg' \ 
+  -d '{"kixi.datastore.metadatastore/header":false, \ 
+       "kixi.datastore.metadatastore/size-bytes":13856, \ 
+       "kixi.datastore.metadatastore/name":"my_uploaded_file.xml", \ 
+       "kixi.datastore.metadatastore/file-type":"XML"}' \
 'https://api.witanforcities.com/api/files/a16ca......1c34f/metadata'
 ```
 
@@ -176,8 +177,50 @@ You'll receive receipt id which you can query against the `/api/receipts/[receip
 
 ## How to find your files.
 
+The `/api/files` endpoint gives you a list of the files that available in your account. 
 
+### Using the API to get a full list of your files.
 
+With your auth token send a GET as illustrated below:
+
+```
+curl -X GET --header 'Accept: application/json' \
+--header 'authorization: eyJhb.....QdDcQ' \
+  'https://api.witanforcities.com/api/files
+```
+
+This will return JSON with two elements: the paging information and the detail of the files available.
+
+### Using the count and index paging parameters
+
+You can find the total number of files available to you in the paging response:
+
+```
+"paging": {
+    "total": 15,
+    "count": 4,
+    "index": 5
+  },
+
+```
+
+The `index` is the starting point of the file count. A list with ten files for example and an `index` of `1` would skip the first file and show the remaining nine.
+
+The `count` tells the API how many files to show in the response. Note that a value of `0` will give no file information in the response regardless of the `index` value.
+
+For example, a `count` of `5` you would send 
+
+```
+https://api.witanforcities.com/api/files?count=5&index=0
+```
+
+Your next call would be `index + count`, following on from the example above the endpoint would look like this:
+
+```
+https://api.witanforcities.com/api/files?count=5&index=5
+```
+
+And you would carry on until all the files were listed. If the `index` value is greater than the `total` then no file info will be returned. 
 
 ## How to download a file.
 
