@@ -76,6 +76,45 @@ Once you have a 200 response and the required url/id combination you can safely 
 
 The file upload aspect of the Witan API is not uploading files in the traditional sense. The API provides a mechanism to generate a URL and file id to upload a file to. The actual uploading of the file, and how that is executed, is up to you. 
 
+### Step 1 - Generate your receipt-id.
+
+Assuming that you have logged in and have an auth token the first step is to do a POST to the `/api/file/upload` endpoint. 
+
+```
+curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' --header 'authorization: eyJhb.....7SeMQ' 'https://api.witanforcities.com/api/files/upload'
+```
+
+This will return a receipt-id, using this id you can now poll against the API to get the file upload link.
+
+```
+curl -X GET --header 'Accept: application/json' --header 'authorization: eyJhb.....7SeMQ' 'https://api.witanforcities.com/api/receipts/abcdefg-abcd-abcd-abcd-abcdeghij'
+```
+
+### Step 2 - Get the upload link.
+
+The response from the `/api/receipt/[receipt-id]` call will respond with either a 202 code, meaning the process is still being handled by Witan, you should continue to call the receipt endpoint with the same URL to see if the receipt has updated. 
+
+If you receive a response with a 200 status code then the request is classed as complete and you will see the following response from the API. 
+
+```
+{
+  "witan.httpapi.spec/uri": "https://prod-witan-kixi-datastore-filestore...........",
+  "kixi.datastore.filestore/id": "d1bec41e.....46c2"
+}
+```
+
+It is your responsibility to upload the file you want stored on Witan using the URL that is in the `witan.httpapi.spec/url` response field. 
+
+```
+curl -vvv -XPUT --data-binary /Users/jasonbell/Downloads/resp_gas.xml "https://prod-witan-kixi-datastore-filestore.s3-eu-west-1.amazonaws.com/d1bec41e-086e-4ad7-
+```
+
+### Step 3 - Post the metadata about that file.
+
+
+## How to find your files.
+
+
 
 
 ## How to download a file.
