@@ -76,6 +76,8 @@ Once you have a 200 response and the required url/id combination you can safely 
 
 The file upload aspect of the Witan API is not uploading files in the traditional sense. The API provides a mechanism to generate a URL and file id to upload a file to. The actual uploading of the file, and how that is executed, is up to you. 
 
+There are three main steps to uploading a file and its metadata to Witan via the API.
+
 ### Step 1 - Generate your receipt-id.
 
 Assuming that you have logged in and have an auth token the first step is to do a POST to the `/api/file/upload` endpoint. 
@@ -110,6 +112,66 @@ curl -vvv -XPUT --data-binary /Users/jasonbell/Downloads/resp_gas.xml "https://p
 ```
 
 ### Step 3 - Post the metadata about that file.
+
+Now that the file is uploaded to Witan you are required to send metadata about that file. If you do not do this then your file entry will not show in Witan searches or file lists. 
+
+The minimum information for file metadata is:
+
+```
+{"kixi.datastore.metadatastore/header":false, 
+ "kixi.datastore.metadatastore/size-bytes":13856,
+ "kixi.datastore.metadatastore/name":"my_uploaded_file.xml",
+ "kixi.datastore.metadatastore/file-type":"XML"}
+```
+
+#### Programatically finding the size of your file.
+You are required to know the size of your file in bytes, for example if you were using the statistical language R for example you would use the `file.size()` command:
+
+```
+> file.size("/path/to/uploaded/file/your_file.xml")
+[1] 13856
+``` 
+In Python:
+
+```
+>>> import os
+>>> filesize = os.path.getsize("/path/to/uploaded/file/your_file.xml")
+>>> filesize
+13856
+```
+
+In PHP:
+
+```
+<?PHP
+$filename = "/path/to/uploaded/file/your_file.xml";
+var $filesize = filesize($filename);
+?>
+```
+
+In Java:
+
+```
+File file = new File("/path/to/uploaded/file/your_file.xml");
+double filesize = file.length();
+```
+
+### Sending the metadata to Witan
+
+Once you have your metadata json then do a PUT to `/api/files/[file-id]/metadata`
+
+```
+curl -X PUT --header 'Content-Type: application/json' \
+  --header 'Accept: application/json' 
+  --header 'authorization: eyJhb....FdB24Pg' 
+  -d '{"kixi.datastore.metadatastore/header":false, 
+       "kixi.datastore.metadatastore/size-bytes":13856, 
+       "kixi.datastore.metadatastore/name":"my_uploaded_file.xml", 
+       "kixi.datastore.metadatastore/file-type":"XML"}' 
+'https://api.witanforcities.com/api/files/a16ca......1c34f/metadata'
+```
+
+You'll receive receipt id which you can query against the `/api/receipts/[receipt-id]` endpoint to see the status of metadata creation. 
 
 
 ## How to find your files.
