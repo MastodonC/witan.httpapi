@@ -283,7 +283,5 @@ There is a timeout on the URL, if it's not used within the time permitted (10 mi
 <HostId>.......</HostId></Error>
 ```
 
-## How to share a file with another user.
-
-
 # Known Issues
+
