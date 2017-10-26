@@ -224,6 +224,64 @@ And you would carry on until all the files were listed. If the `index` value is 
 
 ## How to download a file.
 
+Downloading a file has a similar mechanism to uploading a file. With an auth token and a file-id you request a download url, a receipt-id is issued and you query against the `/api/receipts/[receipt-id]` endpoint until the url is generated within Witan and available to you. 
+
+### Step 1 - Requesting a download URL
+
+Assuming that you have the `file-id` of the file you want to download (see above on how to retrieve a list of file information), using the `/api/files/[file-id]/link` 
+
+```
+curl -X POST --header 'Content-Type: application/json' \
+	--header 'Accept: application/json' \
+	--header 'authorization: eyJhb....KMJw' \ 
+	'https://api.witanforcities.com/api/files/[your-file-id]/link'
+```
+
+The response will give a `receipt-id` and a 202 response code. Using the receipt endpoint call it until you get the download url.
+
+### Step 2 - Call the receipt endpoint to get the URL
+
+With a `receipt-id` you now call the `/api/receipts/` endpoint and wait for your download link. If you get a 202 response code Witan is still processing your original download request. With a 200 response code you will get the url endpoint address.
+
+```
+curl -X GET --header 'Accept: application/json' 
+	--header 'authorization: eyJhb....KMJw' 
+	'https://api.witanforcities.com/api/receipts/[receipt-id]'
+```
+
+The response body will look like:
+
+```
+{
+  "witan.httpapi.spec/uri": "https://prod-witan-kixi-datastore-filestore......",
+  "kixi.datastore.filestore/id": "[your-filestore-id]"
+}
+```
+
+Take the uri value, that's the download link required to retrieve your file.
+
+### Step 3 - Downloading your file
+
+The responsibility of downloading the file is up to you. Using `curl` for example the file download is a basic GET to the URL provided from the API.
+
+```
+curl -o out.xml "https://prod-witan-kixi-datastore-filestore....."
+```
+
+The filename is embedded in the URL in the `filename` parameter, if you wish to extract it and use that. 
+
+There is a timeout on the URL, if it's not used within the time permitted (10 minutes) then you will receive an XML error message as your download: 
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>AccessDenied</Code>
+<Message>Request has expired</Message>
+<X-Amz-Expires>599</X-Amz-Expires>
+<Expires>2017-xx-xxTxx:xx:xxZ</Expires>
+<ServerTime>2017-xx-xxTxx:xx:xxZ</ServerTime>
+<RequestId>27....2C</RequestId>
+<HostId>.......</HostId></Error>
+```
 
 ## How to share a file with another user.
 
