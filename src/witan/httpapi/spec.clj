@@ -44,6 +44,9 @@
 
 (s/def ::id (api-spec sc/uuid? "string"))
 
+(s/def ::user-groups-get
+  (s/keys :req []))
+
 ;; We can't just use the spec from kixi.spec
 ;; because it's a multimethod and swagger can't turn
 ;; that into a describable data structure
@@ -66,8 +69,6 @@
                 ::kdm/source-updated
                 ::kdm-time/temporal-coverage
                 ::kdm-geography/geography]))
-
-
 
 (s/def ::file-metadata-post
   (s/keys :opt [::kdmu-time/temporal-coverage

@@ -99,161 +99,170 @@
 
 (def api-routes
   (context "/api" []
-    :tags ["api"]
-    :coercion :spec
-    :header-params [authorization :- ::user/auth-token]
-    :middleware [authentication-middleware]
+           :tags ["api"]
+           :coercion :spec
+           :header-params [authorization :- ::user/auth-token]
+           :middleware [authentication-middleware]
 
-    (GET "/receipts/:receipt" req
-      :summary "Redirects to any results associated with the specified receipt"
-      :path-params [receipt :- ::s/id]
-      (let [[s r headers] (activities/get-receipt-response (activities req) (user req) receipt)]
-        (if (success? s)
-          (success s nil headers)
-          (fail s r))))
+           (GET "/receipts/:receipt" req
+                :summary "Redirects to any results associated with the specified receipt"
+                :path-params [receipt :- ::s/id]
+                (let [[s r headers] (activities/get-receipt-response (activities req) (user req) receipt)]
+                  (if (success? s)
+                    (success s nil headers)
+                    (fail s r))))
 
-    (context "/files" []
+           (context "/users" []
+                    (GET "/groups" req
+                         :summary "Return a list of groups the user belongs to."
+                         :return ::s/
+                         (let [[s r] (query/get-groups-by-user (request req) (user req))]
+                           (if (success? s)
+                             (success s r)
+                             (fail s)))))
 
-      (GET "/" req
-        :summary "Return a list of files the user has access to"
-        :query-params [{count :- ::s/count nil}
-                       {index :- ::s/index nil}]
-        :return ::s/paged-metadata-items
-        (let [[s r] (query/get-files-by-user (requester req) (user req) {:count count :index index})]
-          (if (success? s)
-            (success s r)
-            (fail s))))
+           (context "/files" []
 
-      (POST "/upload" req
-        :summary "Creates an upload address for a new file"
-        :return ::s/receipt-id-container
-        (let [[s r headers] (activities/create-file-upload!
-                             (activities req)
-                             (user req))]
-          (if (success? s)
-            (success ACCEPTED r headers)
-            (fail s))))
+                    (GET "/" req
+                         :summary "Return a list of files the user has access to"
+                         :query-params [{count :- ::s/count nil}
+                                        {index :- ::s/index nil}]
+                         :return ::s/paged-metadata-items
+                         (let [[s r] (query/get-files-by-user (requester req) (user req) {:count count :index index})]
+                           (if (success? s)
+                             (success s r)
+                             (fail s))))
 
-      (context "/:id" []
+                    (POST "/upload" req
+                          :summary "Creates an upload address for a new file"
+                          :return ::s/receipt-id-container
+                          (let [[s r headers] (activities/create-file-upload!
+                                               (activities req)
+                                               (user req))]
+                            (if (success? s)
+                              (success ACCEPTED r headers)
+                              (fail s))))
 
-        (GET "/upload/:upload-id" req
-          :summary "Return details of an upload request"
-          :path-params [id :- ::s/id
-                        upload-id :- ::s/id]
-          :return ::s/upload-link-response
-          (let [[s r headers] (activities/get-upload-link-response
-                               (activities req)
-                               (user req)
-                               id
-                               upload-id)]
-            (if (success? s)
-              (success s r headers)
-              (fail s))))
+                    (context "/:id" []
 
-        (GET "/metadata" req
-          :summary "Return metadata for a specific file"
-          :path-params [id :- ::s/id]
-          :return ::s/file-metadata-get
-          (let [[s r] (query/get-file-metadata (requester req) (:user req) id)]
-            (if (success? s)
-              (success s r)
-              (fail s))))
+                             (GET "/upload/:upload-id" req
+                                  :summary "Return details of an upload request"
+                                  :path-params [id :- ::s/id
+                                                upload-id :- ::s/id]
+                                  :return ::s/upload-link-response
+                                  (let [[s r headers] (activities/get-upload-link-response
+                                                       (activities req)
+                                                       (user req)
+                                                       id
+                                                       upload-id)]
+                                    (if (success? s)
+                                      (success s r headers)
+                                      (fail s))))
 
-        (PUT "/metadata" req
-          :summary "Create new metadata for a specific file"
-          :path-params [id :- ::s/id]
-          :body [metadata ::s/file-metadata-put]
-          :return ::s/receipt-id-container
-          (let [[s r headers] (activities/create-metadata!
-                               (activities req)
-                               (user req)
-                               metadata
-                               id)]
-            (if (success? s)
-              (success ACCEPTED r headers)
-              (fail s r))))
+                             (GET "/metadata" req
+                                  :summary "Return metadata for a specific file"
+                                  :path-params [id :- ::s/id]
+                                  :return ::s/file-metadata-get
+                                  (let [[s r] (query/get-file-metadata (requester req) (:user req) id)]
+                                    (if (success? s)
+                                      (success s r)
+                                      (fail s))))
 
-        (POST "/metadata" req
-          :summary "Update metadata for a specific file"
-          :path-params [id :- ::s/id]
-          :body [metadata-updates ::s/file-metadata-post]
-          :return ::s/receipt-id-container
-          (let [[s r headers] (activities/update-metadata!
-                               (activities req)
-                               (user req)
-                               metadata-updates
-                               id)]
-            (if (success? s)
-              (success ACCEPTED r headers)
-              (fail s))))
+                             (PUT "/metadata" req
+                                  :summary "Create new metadata for a specific file"
+                                  :path-params [id :- ::s/id]
+                                  :body [metadata ::s/file-metadata-put]
+                                  :return ::s/receipt-id-container
+                                  (let [[s r headers] (activities/create-metadata!
+                                                       (activities req)
+                                                       (user req)
+                                                       metadata
+                                                       id)]
+                                    (if (success? s)
+                                      (success ACCEPTED r headers)
+                                      (fail s r))))
 
-        (GET "/errors/:error-id" req
-          :summary "Return specific error for a specific file"
-          :path-params [id :- ::s/id
-                        error-id :- ::s/id]
-          :return ::s/error-container
-          (let [[s r] (activities/get-error-response
-                       (activities req)
-                       (user req)
-                       error-id
-                       id)]
-            (if (success? s)
-              (success s r)
-              (fail s))))
+                             (POST "/metadata" req
+                                   :summary "Update metadata for a specific file"
+                                   :path-params [id :- ::s/id]
+                                   :body [metadata-updates ::s/file-metadata-post]
+                                   :return ::s/receipt-id-container
+                                   (let [[s r headers] (activities/update-metadata!
+                                                        (activities req)
+                                                        (user req)
+                                                        metadata-updates
+                                                        id)]
+                                     (if (success? s)
+                                       (success ACCEPTED r headers)
+                                       (fail s))))
 
-        (GET "/sharing" req
-          :summary "Return sharing data for a specific file"
-          :path-params [id :- ::s/id]
-          :return ::s/file-sharing
-          (let [[s r] (query/get-file-sharing-info (requester req) (:user req) id)]
-            (if (success? s)
-              (success s r)
-              (fail s))))
+                             (GET "/errors/:error-id" req
+                                  :summary "Return specific error for a specific file"
+                                  :path-params [id :- ::s/id
+                                                error-id :- ::s/id]
+                                  :return ::s/error-container
+                                  (let [[s r] (activities/get-error-response
+                                               (activities req)
+                                               (user req)
+                                               error-id
+                                               id)]
+                                    (if (success? s)
+                                      (success s r)
+                                      (fail s))))
 
-        (POST "/sharing" req
-          :summary "Add a group to the specified file with a particular permission"
-          :path-params [id :- ::s/id]
-          :body-params [activity :- ::kdm/activity
-                        group-id :- ::group/id
-                        operation :- ::s/sharing-operation]
-          :return ::s/receipt-id-container
-          (let [[s r headers] (activities/update-sharing!
-                               (activities req)
-                               (user req)
-                               id
-                               operation
-                               activity
-                               group-id)]
-            (if (success? s)
-              (success ACCEPTED r headers)
-              (fail s))))
+                             (GET "/sharing" req
+                                  :summary "Return sharing data for a specific file"
+                                  :path-params [id :- ::s/id]
+                                  :return ::s/file-sharing
+                                  (let [[s r] (query/get-file-sharing-info (requester req) (:user req) id)]
+                                    (if (success? s)
+                                      (success s r)
+                                      (fail s))))
 
-        (POST "/link" req
-          :summary "Creates a download token for a specific file"
-          :path-params [id :- ::s/id]
-          :return ::s/receipt-id-container
-          (let [[s r headers] (activities/create-file-download!
-                               (activities req)
-                               (user req)
-                               (requester req)
-                               id)]
-            (if (success? s)
-              (success ACCEPTED r headers)
-              (fail s))))
+                             (POST "/sharing" req
+                                   :summary "Add a group to the specified file with a particular permission"
+                                   :path-params [id :- ::s/id]
+                                   :body-params [activity :- ::kdm/activity
+                                                 group-id :- ::group/id
+                                                 operation :- ::s/sharing-operation]
+                                   :return ::s/receipt-id-container
+                                   (let [[s r headers] (activities/update-sharing!
+                                                        (activities req)
+                                                        (user req)
+                                                        id
+                                                        operation
+                                                        activity
+                                                        group-id)]
+                                     (if (success? s)
+                                       (success ACCEPTED r headers)
+                                       (fail s))))
 
-        (GET "/link/:link-id" req
-          :summary "Returns a specific download token for a specific file"
-          :path-params [id :- ::s/id
-                        link-id :- ::s/id]
-          :return ::s/download-link-response
-          (let [[s r headers] (activities/get-download-link-response
-                               (activities req)
-                               (user req)
-                               id
-                               link-id)]
-            (if (success? s)
-              (success s r headers)
-              (fail s))))))))
+                             (POST "/link" req
+                                   :summary "Creates a download token for a specific file"
+                                   :path-params [id :- ::s/id]
+                                   :return ::s/receipt-id-container
+                                   (let [[s r headers] (activities/create-file-download!
+                                                        (activities req)
+                                                        (user req)
+                                                        (requester req)
+                                                        id)]
+                                     (if (success? s)
+                                       (success ACCEPTED r headers)
+                                       (fail s))))
+
+                             (GET "/link/:link-id" req
+                                  :summary "Returns a specific download token for a specific file"
+                                  :path-params [id :- ::s/id
+                                                link-id :- ::s/id]
+                                  :return ::s/download-link-response
+                                  (let [[s r headers] (activities/get-download-link-response
+                                                       (activities req)
+                                                       (user req)
+                                                       id
+                                                       link-id)]
+                                    (if (success? s)
+                                      (success s r headers)
+                                      (fail s))))))))
 
 (def handler
   (api
