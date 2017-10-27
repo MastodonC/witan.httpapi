@@ -44,9 +44,6 @@
 
 (s/def ::id (api-spec sc/uuid? "string"))
 
-(s/def ::user-groups-get
-  (s/keys :req []))
-
 ;; We can't just use the spec from kixi.spec
 ;; because it's a multimethod and swagger can't turn
 ;; that into a describable data structure
@@ -132,6 +129,11 @@
 
 (s/def ::files (s/coll-of ::file-info))
 (s/def ::paged-metadata-items (s/keys :req-un [::files ::paging]))
+
+;; Groups
+(s/def ::group-info (s/keys :req [::group/id ::group/name ::group/type]))
+(s/def ::groups (s/coll-of ::group-info))
+(s/def ::paged-group-items (s/keys :req-un [::groups ::paging]))
 
 ;; Receipts
 (s/def ::status #{"pending" "complete" "error"})
