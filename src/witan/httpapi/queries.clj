@@ -18,19 +18,22 @@
   [{:keys [kixi.datastore.metadatastore/type]}]
   (= type "stored"))
 
-(defn get-groups [requester user]
+(defn get-groups [requester user {:keys [count index]}]
   (let [[s r] (requests/GET requester
                             :heimdall
                             "/groups/search"
-                            {:headers (user-header user)})
-        {:keys [items]} r]
+                            (merge {:headers (user-header user)}
+                                   (when (or count index)
+                                     {:query-params
+                                      (merge {}
+                                             (when count {:count count})
+                                             (when index {:index index}))})))]
     [s (when (= OK s)
-         {:groups (map #(select-keys % [::group/id
-                                       ::group/name
-                                       ::group/type]) items)
-          :paging {:index 0
-                   :total (count items)
-                   :count (count items)}})]))
+         (-> r
+             (update :groups assoc (map #(select-keys % [::group/id
+                                                         ::group/name
+                                                         ::group/type]) (:items r)))
+             (dissoc :items)))]))
 
 (defn get-files-by-user
   [requester user {:keys [count index]}]

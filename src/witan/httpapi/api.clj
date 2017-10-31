@@ -110,9 +110,11 @@
           (fail s r))))
 
     (GET "/groups" req
-      :summary "Return a list of groups."
+         :summary "Return a list of groups."
+         :query-params [{count :- ::s/count nil}
+                        {index :- ::s/index nil}]
       :return ::s/paged-group-items
-      (let [[s r] (query/get-groups (requester req) (user req))]
+      (let [[s r] (query/get-groups (requester req) (user req) {:count count :index index})]
         (if (success? s)
           (success s r)
           (fail s))))
