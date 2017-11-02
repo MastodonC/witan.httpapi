@@ -1,16 +1,13 @@
 (ns witan.httpapi.api
   (:require [compojure.api.sweet :refer :all]
             [ring.util.http-response :refer [ok unauthorized not-found]]
-            [clj-time.core              :as t]
+            [clj-time.core :as t]
             [taoensso.timbre :as log]
-            ;;
             [witan.httpapi.spec :as s]
             [witan.httpapi.queries :as query]
-            ;;
             [kixi.user :as user]
             [kixi.group :as group]
             [kixi.datastore.metadatastore :as kdm]
-            ;;
             [witan.httpapi.components.auth :as auth]
             [witan.httpapi.components.activities :as activities]
             [witan.httpapi.response-codes :refer :all]))
@@ -37,7 +34,7 @@
   ([status body]
    (log/debug "Returning failure response" status)
    {:status status
-    :body body}))
+    :body   body}))
 
 (defn success
   ([body]
@@ -46,8 +43,8 @@
    (success status body nil))
   ([status body headers]
    (log/debug "Returning successful response" status)
-   {:status status
-    :body body
+   {:status  status
+    :body    body
     :headers headers}))
 
 (defn success?
@@ -63,7 +60,7 @@
 (def not-found-routes
   (let [not-found-resp (not-found "Not Found")]
     (context "/" []
-             (ANY "/*" [] not-found-resp))))
+      (ANY "/*" [] not-found-resp))))
 
 (def auth-routes
   (context "/api" []
@@ -112,6 +109,16 @@
           (success s nil headers)
           (fail s r))))
 
+    (GET "/groups" req
+         :summary "Return a list of groups."
+         :query-params [{count :- ::s/count nil}
+                        {index :- ::s/index nil}]
+      :return ::s/paged-group-items
+      (let [[s r] (query/get-groups (requester req) (user req) {:count count :index index})]
+        (if (success? s)
+          (success s r)
+          (fail s))))
+
     (context "/files" []
 
       (GET "/" req
@@ -128,8 +135,8 @@
         :summary "Creates an upload address for a new file"
         :return ::s/receipt-id-container
         (let [[s r headers] (activities/create-file-upload!
-                             (activities req)
-                             (user req))]
+                              (activities req)
+                              (user req))]
           (if (success? s)
             (success ACCEPTED r headers)
             (fail s))))
@@ -142,10 +149,10 @@
                         upload-id :- ::s/id]
           :return ::s/upload-link-response
           (let [[s r headers] (activities/get-upload-link-response
-                               (activities req)
-                               (user req)
-                               id
-                               upload-id)]
+                                (activities req)
+                                (user req)
+                                id
+                                upload-id)]
             (if (success? s)
               (success s r headers)
               (fail s))))
@@ -165,10 +172,10 @@
           :body [metadata ::s/file-metadata-put]
           :return ::s/receipt-id-container
           (let [[s r headers] (activities/create-metadata!
-                               (activities req)
-                               (user req)
-                               metadata
-                               id)]
+                                (activities req)
+                                (user req)
+                                metadata
+                                id)]
             (if (success? s)
               (success ACCEPTED r headers)
               (fail s r))))
@@ -179,10 +186,10 @@
           :body [metadata-updates ::s/file-metadata-post]
           :return ::s/receipt-id-container
           (let [[s r headers] (activities/update-metadata!
-                               (activities req)
-                               (user req)
-                               metadata-updates
-                               id)]
+                                (activities req)
+                                (user req)
+                                metadata-updates
+                                id)]
             (if (success? s)
               (success ACCEPTED r headers)
               (fail s))))
@@ -193,10 +200,10 @@
                         error-id :- ::s/id]
           :return ::s/error-container
           (let [[s r] (activities/get-error-response
-                       (activities req)
-                       (user req)
-                       error-id
-                       id)]
+                        (activities req)
+                        (user req)
+                        error-id
+                        id)]
             (if (success? s)
               (success s r)
               (fail s))))
@@ -218,12 +225,12 @@
                         operation :- ::s/sharing-operation]
           :return ::s/receipt-id-container
           (let [[s r headers] (activities/update-sharing!
-                               (activities req)
-                               (user req)
-                               id
-                               operation
-                               activity
-                               group-id)]
+                                (activities req)
+                                (user req)
+                                id
+                                operation
+                                activity
+                                group-id)]
             (if (success? s)
               (success ACCEPTED r headers)
               (fail s))))
@@ -233,10 +240,10 @@
           :path-params [id :- ::s/id]
           :return ::s/receipt-id-container
           (let [[s r headers] (activities/create-file-download!
-                               (activities req)
-                               (user req)
-                               (requester req)
-                               id)]
+                                (activities req)
+                                (user req)
+                                (requester req)
+                                id)]
             (if (success? s)
               (success ACCEPTED r headers)
               (fail s))))
@@ -247,23 +254,23 @@
                         link-id :- ::s/id]
           :return ::s/download-link-response
           (let [[s r headers] (activities/get-download-link-response
-                               (activities req)
-                               (user req)
-                               id
-                               link-id)]
+                                (activities req)
+                                (user req)
+                                id
+                                link-id)]
             (if (success? s)
               (success s r headers)
               (fail s))))))))
 
 (def handler
   (api
-   {:swagger
-    {:ui "/"
-     :spec "/swagger.json"
-     :options {:ui {:jsonEditor true}}
-     :data {:info {:title "Witan API (Datastore) "}
-            :tags [{:name "api", :description "API routes for Witan"}]}}}
-   healthcheck-routes
-   auth-routes
-   api-routes
-   not-found-routes))
+    {:swagger
+     {:ui      "/"
+      :spec    "/swagger.json"
+      :options {:ui {:jsonEditor true}}
+      :data    {:info {:title "Witan API (Datastore) "}
+                :tags [{:name "api", :description "API routes for Witan"}]}}}
+    healthcheck-routes
+    auth-routes
+    api-routes
+    not-found-routes))

@@ -141,6 +141,14 @@
     (when-success r
       (is-spec :witan.httpapi.spec/paged-metadata-items (:body r)))))
 
+(deftest get-groups-test
+  (let [auth (get-auth-tokens)
+        r @(http/get (url "/api/groups")
+                     (with-default-opts
+                       {:headers {:authorization (:auth-token auth)}}))]
+    (when-success r
+      (is-spec :witan.httpapi.spec/paged-group-items (:body r)))))
+
 (deftest get-files-paging-test
   (let [auth (get-auth-tokens)
         r @(http/get (url "/api/files")
@@ -159,6 +167,22 @@
 
     (testing "Is the index being increased?"
       (let [r @(http/get (url "/api/files?index=1")
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))
+            {:keys [total count index]} (get-paging r)]
+        (is (= 1 index))))))
+
+(deftest get-groups-paging-test
+  (let [auth (get-auth-tokens)]
+    (testing "Is the number of results being limited?"
+      (let [r @(http/get (url "/api/groups?count=1")
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))
+            {:keys [total count index]} (get-paging r)]
+        (is (= 1 count))))
+
+    (testing "Is the index being increased?"
+      (let [r @(http/get (url "/api/groups?index=1")
                          (with-default-opts
                            {:headers {:authorization (:auth-token auth)}}))
             {:keys [total count index]} (get-paging r)]

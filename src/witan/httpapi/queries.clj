@@ -1,6 +1,7 @@
 (ns witan.httpapi.queries
   (:require [witan.httpapi.components.requests :as requests]
-            [witan.httpapi.response-codes :refer :all]))
+            [witan.httpapi.response-codes :refer :all]
+            [kixi.group :as group]))
 
 (defn encode-kw
   [kw]
@@ -16,6 +17,23 @@
 (defn file?
   [{:keys [kixi.datastore.metadatastore/type]}]
   (= type "stored"))
+
+(defn get-groups [requester user {:keys [count index]}]
+  (let [[s r] (requests/GET requester
+                            :heimdall
+                            "/groups/search"
+                            (merge {:headers (user-header user)}
+                                   (when (or count index)
+                                     {:query-params
+                                      (merge {}
+                                             (when count {:count count})
+                                             (when index {:index index}))})))]
+    [s (when (= OK s)
+         (-> r
+             (assoc :groups (map #(select-keys % [::group/id
+                                                  ::group/name
+                                                  ::group/type]) (:items r)))
+             (dissoc :items)))]))
 
 (defn get-files-by-user
   [requester user {:keys [count index]}]

@@ -17,5 +17,7 @@ pom.xml.asc
 aws-variables.env
 resources/local.edn
 .temp_hosts
+/.idea/
+*.iml
 /tmp/kixi-datastore/*
 !/tmp/kixi-datastore/force-dir-create 

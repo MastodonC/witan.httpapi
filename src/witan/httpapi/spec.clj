@@ -67,8 +67,6 @@
                 ::kdm-time/temporal-coverage
                 ::kdm-geography/geography]))
 
-
-
 (s/def ::file-metadata-post
   (s/keys :opt [::kdmu-time/temporal-coverage
                 ::kdmu-geography/geography
@@ -131,6 +129,11 @@
 
 (s/def ::files (s/coll-of ::file-info))
 (s/def ::paged-metadata-items (s/keys :req-un [::files ::paging]))
+
+;; Groups
+(s/def ::group-info (s/keys :req [::group/id ::group/name ::group/type]))
+(s/def ::groups (s/coll-of ::group-info))
+(s/def ::paged-group-items (s/keys :req-un [::groups ::paging]))
 
 ;; Receipts
 (s/def ::status #{"pending" "complete" "error"})
