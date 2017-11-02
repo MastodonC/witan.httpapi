@@ -30,9 +30,9 @@
                                              (when index {:index index}))})))]
     [s (when (= OK s)
          (-> r
-             (update :groups assoc (map #(select-keys % [::group/id
-                                                         ::group/name
-                                                         ::group/type]) (:items r)))
+             (assoc :groups (map #(select-keys % [::group/id
+                                                  ::group/name
+                                                  ::group/type]) (:items r)))
              (dissoc :items)))]))
 
 (defn get-files-by-user
