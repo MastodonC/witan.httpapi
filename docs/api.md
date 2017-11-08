@@ -15,7 +15,7 @@ When you visit the URL you will see the following screen.
 
 ![api-screenshot.png](api-screenshot.png)
 
-Clicking on the relevant API routes will expand into an information window where see the required fields and try out the API.
+Clicking on the relevant API routes will expand into an information window, within that window are the required fields and try out the API.
 
 ## How to check the API is healthy.
 
@@ -66,9 +66,9 @@ curl -X POST --header 'Content-Type: application/json' --header 'Accept: applica
 
 The Witan API is based on an asynchronus system. For aspects like uploads for example the API will issue you a receipt id. You are expected to use this receipt along with your auth token to query the API until the action is complete.
 
-For example: you want to upload a file, once you've authenticated your user and have an auth token you will then call `/api/files/upload` with your auth token as a header. In response the API will send back a `receipt-id` value and a 202 response code. 
+For example: you want to upload a file, once you've authenticated your user and received your auth token in the login response you call `/api/files/upload` with your auth token as a header. In response the API will send back a `receipt-id` value and a 202 response code. 
 
-While Witan processes your file upload request you are expected to use the endpoint `/api/receipts/[receipt-id]` to see if your upload request url is ready. If Witan has successfully processed created an upload link you will receive a 200 response code along with upload link and filestore id. 
+While Witan processes your file upload request you are expected to use the endpoint `/api/receipts/{receipt}` to see if your upload request url is ready. If Witan has successfully created an upload link you will receive a 200 response code along with upload link and filestore id. 
 
 Once you have a 200 response and the required url/id combination you can safely upload your file. 
 
@@ -105,10 +105,10 @@ If you receive a response with a 200 status code then the request is classed as 
 }
 ```
 
-It is your responsibility to upload the file you want stored on Witan using the URL that is in the `witan.httpapi.spec/url` response field. 
+It is your responsibility to upload the file you want stored on Witan using the URL that is in the `witan.httpapi.spec/uri` response field. Send the file as a binary data file. If you are using `curl` then the upload would look something like this:
 
 ```
-curl -vvv -XPUT --data-binary /Users/jasonbell/Downloads/resp_gas.xml "https://prod-witan-kixi-datastore-filestore.s3-eu-west-1.amazonaws.com/d1bec41e-086e-4ad7-
+curl -vvv -XPUT --data-binary /path/to/your_file.xml "https://prod-witan-kixi-datastore-filestore.s3-eu-west-1.amazonaws.com/d1bec41e.......-4ad7x
 ```
 
 ### Step 3 - Post the metadata about that file.
@@ -156,6 +156,13 @@ In Java:
 File file = new File("/path/to/uploaded/file/your_file.xml");
 double filesize = file.length();
 ```
+
+In Bash Script:
+
+```
+wc -c your_file.xml
+```
+
 
 ### Sending the metadata to Witan
 
