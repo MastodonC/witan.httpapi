@@ -17,7 +17,7 @@
                  [metosin/spec-tools "0.5.0"]
                  [metosin/compojure-api "2.0.0-alpha10" :exclusions [metosin/spec-tools]]
                  [kixi/kixi.spec "0.1.7"]
-                 [kixi/kixi.comms "0.2.29"]
+                 [kixi/kixi.comms "0.2.30"]
                  [kixi/kixi.log "0.1.5"]
                  [kixi/kixi.metrics "0.4.0" :exclusions [org.slf4j/slf4j-api]]
                  [kixi/aleph "0.4.4-alpha5"]
