@@ -195,7 +195,7 @@
        database id
        (if (= REDIRECT status)
          (create-download-link! database user id file-id (get headers "location"))
-         (create-error! database id file-id status))))
+         (create-error! database id file-id (code->reason status)))))
     (return-receipt id)))
 
 (defn- retreive-download-link
