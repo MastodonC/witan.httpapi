@@ -44,6 +44,20 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn manifold-io-exception?
+  [m]
+  (and
+   (= java.io.IOException (type (:?err m)))
+   (= "error in manifold.utils/future-with" (get-in m [:vargs 0]))
+   (= "Stream closed" (.getMessage (:?err m)))))
+
+(defn remove-known-benign-exceptions
+  [m]
+  (when-not (or (manifold-io-exception? m))
+    m))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn new-system [profile]
   (timbre/debug "Profile" profile)
   (config/save-profile! profile)
@@ -53,6 +67,7 @@
     ;; logging config
     (timbre/set-config!
      (assoc log-config
+            :middleware [remove-known-benign-exceptions]
             :appenders (if (or (= profile :staging)
                                (= profile :prod))
                          {:direct-json (kixi-log/timbre-appender-logstash)}
