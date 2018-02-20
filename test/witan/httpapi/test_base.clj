@@ -5,6 +5,7 @@
             [clojure data
              [test :refer :all]]
             [witan.httpapi.system :as sys]
+            [witan.httpapi.api :as api]
             [com.stuartsierra.component :as component]
             [clojure.spec.alpha :as spec]
             [environ.core :refer [env]]))
@@ -192,7 +193,7 @@
       (let [receipt-resp (wait-for-receipt auth resp)]
         (is (= 200 (:status receipt-resp))
             "upload link receipt")
-        (let [body (:body receipt-resp)
+        (let [body (:body (api/coerce-response receipt-resp))
               uri (:witan.httpapi.spec/uri body)
               file-id (:kixi.datastore.filestore/id body)]
           (is uri)
@@ -251,6 +252,6 @@
                   "metadata receipt")
               (if-not (-> receipt-resp :body :error)
                 (do
-                  (is-submap metadata (:body receipt-resp))
-                  (:body receipt-resp))
+                  (is-submap metadata (:body (api/coerce-response receipt-resp)))
+                  (:body (api/coerce-response receipt-resp)))
                 (println "Error was returned:" (-> receipt-resp :body :error) "\nIf error is `file-not-exist` it could be because the tests are running elsewhere.")))))))))

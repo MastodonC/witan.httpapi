@@ -304,7 +304,7 @@
         (when-accepted  receipt-resp
           (let [receipt-resp (wait-for-receipt auth receipt-resp)]
             (when-success receipt-resp
-              (is-spec ::s/download-link-response (:body receipt-resp)))))))))
+              (is-spec ::s/download-link-response (:body (coerce-response receipt-resp))))))))))
 
 (deftest sharing-update-test
   (let [auth (get-auth-tokens)
