@@ -262,15 +262,56 @@
               (success s r headers)
               (fail s))))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn coerce-conj-disj-set
+  [x]
+  (->> x
+       (map (fn [[k' v']] (hash-map k' (set v'))))
+       (into {})))
+
+(def payload-fields-to-coerce
+  {:kixi.datastore.metadatastore.update/tags        coerce-conj-disj-set
+   :kixi.datastore.metadatastore.update/bundled-ids coerce-conj-disj-set
+   :kixi.datastore.metadatastore/tags               set
+   :kixi.datastore.metadatastore/bundled-ids        set})
+
+;;;;
+
+(defn coerce-request-response
+  [k fields req]
+  (update req k
+          (fn [bp] (clojure.walk/postwalk #(if (and (vector? %)
+                                                    (get fields (first %)))
+                                             (update % 1 ((first %) fields))
+                                             %) bp))))
+
+(def coerce-request  (partial coerce-request-response :body-params payload-fields-to-coerce))
+(def coerce-response (partial coerce-request-response :body payload-fields-to-coerce))
+
+(defn json-spec-coercion
+  "Assoc given components to the request."
+  [handler]
+  (fn
+    ([req]
+     (let [nreq (if (and (not= :get (:request-method req))
+                         (:body-params req))
+                  (coerce-request req)
+                  req)]
+       (handler nreq)))
+    #_([req respond raise] ;; leaving this here incase we ever need it
+       (handler req respond raise))))
+
 (def handler
   (api
-    {:swagger
-     {:ui      "/"
-      :spec    "/swagger.json"
-      :options {:ui {:jsonEditor true}}
-      :data    {:info {:title "Witan API (Datastore) "}
-                :tags [{:name "api", :description "API routes for Witan"}]}}}
-    healthcheck-routes
-    auth-routes
-    api-routes
-    not-found-routes))
+   {:middleware [json-spec-coercion]
+    :swagger
+    {:ui      "/"
+     :spec    "/swagger.json"
+     :options {:ui {:jsonEditor true}}
+     :data    {:info {:title "Witan API (Datastore) "}
+               :tags [{:name "api", :description "API routes for Witan"}]}}}
+   healthcheck-routes
+   auth-routes
+   api-routes
+   not-found-routes))
