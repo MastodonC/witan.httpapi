@@ -272,7 +272,9 @@
 
 (def payload-tags-to-coerce
   {:kixi.datastore.metadatastore.update/tags coerce-conj-disj-set
-   :kixi.datastore.metadatastore.update/bundle-ids coerce-conj-disj-set})
+   :kixi.datastore.metadatastore.update/bundled-ids coerce-conj-disj-set
+   :kixi.datastore.metadatastore/tags set
+   :kixi.datastore.metadatastore/bundled-ids set})
 
 (defn update-body-param
   [r k t]
