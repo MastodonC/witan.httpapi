@@ -139,7 +139,7 @@
                      (with-default-opts
                        {:headers {:authorization (:auth-token auth)}}))]
     (when-success r
-      (is-spec :witan.httpapi.spec/paged-metadata-items (:body r)))))
+      (is-spec :witan.httpapi.spec/paged-metadata-items (:body (coerce-response r payload-fields-to-coerce))))))
 
 (deftest get-groups-test
   (let [auth (get-auth-tokens)

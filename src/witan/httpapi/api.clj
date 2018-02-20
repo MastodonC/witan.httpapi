@@ -270,34 +270,36 @@
        (map (fn [[k' v']] (hash-map k' (set v'))))
        (into {})))
 
-(def payload-tags-to-coerce
-  {:kixi.datastore.metadatastore.update/tags coerce-conj-disj-set
+(def payload-fields-to-coerce
+  {:kixi.datastore.metadatastore.update/tags        coerce-conj-disj-set
    :kixi.datastore.metadatastore.update/bundled-ids coerce-conj-disj-set
-   :kixi.datastore.metadatastore/tags set
-   :kixi.datastore.metadatastore/bundled-ids set})
+   :kixi.datastore.metadatastore/tags               set
+   :kixi.datastore.metadatastore/bundled-ids        set})
 
-(defn update-body-param
-  [r k t]
-  (let [path [:body-params k]]
-    (if (get-in r path)
-      (update-in r path t)
-      r)))
+;;;;
 
-(defn request-requires-coercion?
-  [r coerce-map]
-  (boolean (some identity (map #(get-in r [:body-params %]) (keys coerce-map)))))
+(defn coerce-request-response
+  [k req fields]
+  (update req k
+          (fn [bp] (clojure.walk/postwalk #(if (and (vector? %)
+                                                    (get fields (first %)))
+                                             (update % 1 ((first %) fields))
+                                             %) bp))))
+
+(def coerce-request  (partial coerce-request-response :body-params))
+(def coerce-response (partial coerce-request-response :body))
 
 (defn json-spec-coercion
   "Assoc given components to the request."
   [handler]
   (fn
     ([req]
-     (let [nreq (if (and (= :post (:request-method req))
-                         (request-requires-coercion? req payload-tags-to-coerce))
-                  (reduce-kv update-body-param req payload-tags-to-coerce)
+     (let [nreq (if (and (not= :get (:request-method req))
+                         (:body-params req))
+                  (coerce-request req payload-fields-to-coerce)
                   req)]
        (handler nreq)))
-    #_([req respond raise]
+    #_([req respond raise] ;; leaving this here incase we ever need it
        (handler req respond raise))))
 
 (def handler
