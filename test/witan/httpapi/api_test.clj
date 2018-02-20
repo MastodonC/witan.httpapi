@@ -195,7 +195,7 @@
                        {:headers {:authorization (:auth-token auth)}}))]
 
     (when-success r
-      (is-spec :witan.httpapi.spec/file-metadata-get (:body r)))))
+      (is-spec :witan.httpapi.spec/file-metadata-get (:body (coerce-response r payload-fields-to-coerce))))))
 
 (deftest get-metadata-sharing-test
   (let [auth (get-auth-tokens)
