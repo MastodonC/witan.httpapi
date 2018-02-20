@@ -243,8 +243,7 @@
                                 :kixi.datastore.metadatastore.license/license {:kixi.datastore.metadatastore.license/type new-license}
                                 :kixi.datastore.metadatastore.time/temporal-coverage {:kixi.datastore.metadatastore.time/from new-temporal-coverage-from
                                                                                       :kixi.datastore.metadatastore.time/to new-temporal-coverage-to})
-                         (update (-> r :body)
-                                 (coerce-response)
+                         (update (-> r :body (coerce-response))
                                  ::ms/tags sort)))))))))
 
 (deftest update-metadata-removal-test
