@@ -274,9 +274,12 @@
   {:kixi.datastore.metadatastore.update/tags coerce-conj-disj-set
    :kixi.datastore.metadatastore.update/bundle-ids coerce-conj-disj-set})
 
-(defn coerce-body-param
+(defn update-body-param
   [r k t]
-  (update-in r [:body-params k] t))
+  (let [path [:body-params k]]
+    (if (get-in r path)
+      (update-in r path t)
+      r)))
 
 (defn request-requires-coercion?
   [r coerce-map]
@@ -289,7 +292,7 @@
     ([req]
      (let [nreq (if (and (= :post (:request-method req))
                          (request-requires-coercion? req payload-tags-to-coerce))
-                  (reduce-kv coerce-body-param req payload-tags-to-coerce)
+                  (reduce-kv update-body-param req payload-tags-to-coerce)
                   req)]
        (handler nreq)))
     #_([req respond raise]
