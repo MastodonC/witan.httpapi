@@ -279,15 +279,15 @@
 ;;;;
 
 (defn coerce-request-response
-  [k req fields]
+  [k fields req]
   (update req k
           (fn [bp] (clojure.walk/postwalk #(if (and (vector? %)
                                                     (get fields (first %)))
                                              (update % 1 ((first %) fields))
                                              %) bp))))
 
-(def coerce-request  (partial coerce-request-response :body-params))
-(def coerce-response (partial coerce-request-response :body))
+(def coerce-request  (partial coerce-request-response :body-params payload-fields-to-coerce))
+(def coerce-response (partial coerce-request-response :body payload-fields-to-coerce))
 
 (defn json-spec-coercion
   "Assoc given components to the request."
@@ -296,7 +296,7 @@
     ([req]
      (let [nreq (if (and (not= :get (:request-method req))
                          (:body-params req))
-                  (coerce-request req payload-fields-to-coerce)
+                  (coerce-request req)
                   req)]
        (handler nreq)))
     #_([req respond raise] ;; leaving this here incase we ever need it

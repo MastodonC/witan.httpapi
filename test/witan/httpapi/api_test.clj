@@ -125,7 +125,7 @@
                       (with-default-opts
                         {:form-params rl}))]
     (when-created r
-      (is-spec ::user/token-pair-container (:body r)))))
+      (is-spec ::user/token-pair-container (:body (coerce-response r))))))
 
 (deftest swagger-test
   (let [r @(http/get (url "/swagger.json")
@@ -139,7 +139,7 @@
                      (with-default-opts
                        {:headers {:authorization (:auth-token auth)}}))]
     (when-success r
-      (is-spec :witan.httpapi.spec/paged-metadata-items (:body (coerce-response r payload-fields-to-coerce))))))
+      (is-spec :witan.httpapi.spec/paged-metadata-items (:body (coerce-response r))))))
 
 (deftest get-groups-test
   (let [auth (get-auth-tokens)
@@ -147,7 +147,7 @@
                      (with-default-opts
                        {:headers {:authorization (:auth-token auth)}}))]
     (when-success r
-      (is-spec :witan.httpapi.spec/paged-group-items (:body r)))))
+      (is-spec :witan.httpapi.spec/paged-group-items (:body (coerce-response r))))))
 
 (deftest get-files-paging-test
   (let [auth (get-auth-tokens)
@@ -195,7 +195,7 @@
                        {:headers {:authorization (:auth-token auth)}}))]
 
     (when-success r
-      (is-spec :witan.httpapi.spec/file-metadata-get (:body (coerce-response r payload-fields-to-coerce))))))
+      (is-spec :witan.httpapi.spec/file-metadata-get (:body (coerce-response r))))))
 
 (deftest get-metadata-sharing-test
   (let [auth (get-auth-tokens)
@@ -203,7 +203,7 @@
                      (with-default-opts
                        {:headers {:authorization (:auth-token auth)}}))]
     (when-success r
-      (is-spec :witan.httpapi.spec/file-sharing (:body r)))))
+      (is-spec :witan.httpapi.spec/file-sharing (:body (coerce-response r))))))
 
 (deftest update-metadata-test
   (let [auth (get-auth-tokens)
@@ -244,6 +244,7 @@
                                 :kixi.datastore.metadatastore.time/temporal-coverage {:kixi.datastore.metadatastore.time/from new-temporal-coverage-from
                                                                                       :kixi.datastore.metadatastore.time/to new-temporal-coverage-to})
                          (update (-> r :body)
+                                 (coerce-response)
                                  ::ms/tags sort)))))))))
 
 (deftest update-metadata-removal-test
