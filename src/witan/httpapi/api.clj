@@ -262,15 +262,49 @@
               (success s r headers)
               (fail s))))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn coerce-conj-disj-set
+  [x]
+  (->> x
+       (map (fn [[k' v']] (hash-map k' (set v'))))
+       (into {})))
+
+(def payload-tags-to-coerce
+  {:kixi.datastore.metadatastore.update/tags coerce-conj-disj-set
+   :kixi.datastore.metadatastore.update/bundle-ids coerce-conj-disj-set})
+
+(defn coerce-body-param
+  [r k t]
+  (update-in r [:body-params k] t))
+
+(defn request-requires-coercion?
+  [r coerce-map]
+  (boolean (some identity (map #(get-in r [:body-params %]) (keys coerce-map)))))
+
+(defn json-spec-coercion
+  "Assoc given components to the request."
+  [handler]
+  (fn
+    ([req]
+     (let [nreq (if (and (= :post (:request-method req))
+                         (request-requires-coercion? req payload-tags-to-coerce))
+                  (reduce-kv coerce-body-param req payload-tags-to-coerce)
+                  req)]
+       (handler nreq)))
+    #_([req respond raise]
+       (handler req respond raise))))
+
 (def handler
   (api
-    {:swagger
-     {:ui      "/"
-      :spec    "/swagger.json"
-      :options {:ui {:jsonEditor true}}
-      :data    {:info {:title "Witan API (Datastore) "}
-                :tags [{:name "api", :description "API routes for Witan"}]}}}
-    healthcheck-routes
-    auth-routes
-    api-routes
-    not-found-routes))
+   {:middleware [json-spec-coercion]
+    :swagger
+    {:ui      "/"
+     :spec    "/swagger.json"
+     :options {:ui {:jsonEditor true}}
+     :data    {:info {:title "Witan API (Datastore) "}
+               :tags [{:name "api", :description "API routes for Witan"}]}}}
+   healthcheck-routes
+   auth-routes
+   api-routes
+   not-found-routes))

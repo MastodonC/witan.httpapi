@@ -16,7 +16,7 @@
                  [spootnik/signal "0.2.1"]
                  [metosin/spec-tools "0.5.0"]
                  [metosin/compojure-api "2.0.0-alpha10" :exclusions [metosin/spec-tools]]
-                 [kixi/kixi.spec "0.1.15"]
+                 [kixi/kixi.spec "0.1.18"]
                  [kixi/kixi.comms "0.2.31"]
                  [kixi/kixi.log "0.1.5"]
                  [kixi/kixi.metrics "0.4.0" :exclusions [org.slf4j/slf4j-api]]
