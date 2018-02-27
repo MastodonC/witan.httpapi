@@ -18,7 +18,7 @@
                  [metosin/compojure-api "2.0.0-alpha10" :exclusions [metosin/spec-tools]]
                  [kixi/kixi.spec "0.1.18"]
                  [kixi/kixi.comms "0.2.31"]
-                 [kixi/kixi.log "0.1.5"]
+                 [kixi/kixi.log "0.1.6"]
                  [kixi/kixi.metrics "0.4.0" :exclusions [org.slf4j/slf4j-api]]
                  [kixi/aleph "0.4.4-alpha5" :exclusions [io.netty/netty-all]]
                  [io.netty/netty-all "4.1.21.Final"]
