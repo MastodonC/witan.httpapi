@@ -237,14 +237,14 @@
               (is-submap (assoc @file-metadata
                                 ::ms/description new-desc
                                 ::ms/name new-name
-                                ::ms/tags (into (sorted-set) (mapv name new-tags))
+                                ::ms/tags (sort (mapv name new-tags))
                                 ::ms/source-updated new-source-updated
                                 ::ms/maintainer new-maintainer
                                 :kixi.datastore.metadatastore.license/license {:kixi.datastore.metadatastore.license/type new-license}
                                 :kixi.datastore.metadatastore.time/temporal-coverage {:kixi.datastore.metadatastore.time/from new-temporal-coverage-from
                                                                                       :kixi.datastore.metadatastore.time/to new-temporal-coverage-to})
                          (update (-> r :body (coerce-response))
-                                 ::ms/tags #(into (sorted-set) %))))))))))
+                                 ::ms/tags sort)))))))))
 
 (deftest update-metadata-removal-test
   (let [auth (get-auth-tokens)]
