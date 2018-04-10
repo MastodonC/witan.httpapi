@@ -42,7 +42,7 @@ search:
         volumes_from:
           - "elasticsearch"
         volumes:
-          - ./tmp/kixi-searcj:/tmp/kixi-search
+          - ./tmp/kixi-search:/tmp/kixi-search
         links:
           - elasticsearch:elasticsearch
           - dynamodb:dynamodb

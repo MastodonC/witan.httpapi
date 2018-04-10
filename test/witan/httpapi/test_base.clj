@@ -215,7 +215,7 @@
               :content-type :json
               :as :json
               :headers {:authorization (:auth-token auth)}
-              :form-params (select-keys metadata [::ms/size-bytes ::ms/file-type ::ms/description ::ms/name ::ms/header])}))
+              :form-params (select-keys metadata [::ms/size-bytes ::ms/file-type ::ms/description ::ms/name ::ms/header ::ms/tags])}))
 
 (defn post-metadata-update
   [auth id params]
@@ -235,7 +235,8 @@
                    (clojure.string/last-index-of file-name "."))
    ::ms/description file-name
    ::ms/file-type (subs file-name
-                        (inc (clojure.string/last-index-of file-name ".")))})
+                        (inc (clojure.string/last-index-of file-name ".")))
+   ::ms/tags #{"foo" "bar" "baz"}})
 
 (defn send-file-and-metadata
   [auth file-name metadata]
