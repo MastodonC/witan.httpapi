@@ -37,19 +37,17 @@
 
 (defn get-files-by-user
   [requester user {:keys [count index]}]
-  (let [[s r] (requests/POST requester
-                             :search
-                             "/metadata"
-                             {:form-params (merge {:kixi.datastore.metadatastore.query/type {:equals "stored"}}
-                                                  (when count
-                                                    {:size count})
-                                                  (when index
-                                                    {:from index}))
-                              :content-type :json
-                              :headers (user-header user)})
-        {:keys [items]} r]
+  (let [[s r] (requests/GET requester
+                            :datastore
+                            "/metadata"
+                            {:query-params (merge {:activity (mapv encode-kw [:kixi.datastore.metadatastore/meta-read])}
+                                                  (when count {:count count})
+                                                  (when index {:index index}))
+                             :headers (user-header user)})
+        {:keys [items]} r
+        files (filter file? items)] ;; `count` could now be wrong
     [s (-> r
-           (assoc :files items) ;;maintain pre-search api
+           (assoc :files files)
            (dissoc :items))]))
 
 (defn- get-file-info [requester user id]
