@@ -23,9 +23,9 @@
                                   :test {:host #or [#env DATASTORE_HOST "localhost"]
                                          :port #or [#env DATASTORE_PORT 38001]}}
              :search #profile {:default {:host "kixi.search.marathon.mesos"
-                                         :port 18090}
+                                         :port 18091}
                                :development {:host #or [#env SEARCH_HOST "localhost"]
-                                             :port #or [#env SEARCH_PORT 8090]}
+                                             :port #or [#env SEARCH_PORT 8091]}
                                :test {:host #or [#env SEARCH_HOST "localhost"]
                                       :port #or [#env SEARCH_PORT 38091]}}}
  :verbose-logging? #profile {:default true
