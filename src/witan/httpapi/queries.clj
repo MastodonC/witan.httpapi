@@ -48,6 +48,7 @@
                               :content-type :json
                               :headers (user-header user)})
         {:keys [items]} r]
+    (log/debug "Search /metdata returned:" s r)
     [s (-> r
            (assoc :files items) ;;maintain pre-search api
            (dissoc :items))]))

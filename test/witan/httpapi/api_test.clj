@@ -86,6 +86,7 @@
 
 (defn upload-file-inline
   [auth]
+  (log/info "Uploading a new file as part of the fixture.")
   (let [m (create-metadata file-name)
         new-metadata (send-file-and-metadata auth file-name m)]
     (when-not (and new-metadata (is-spec :witan.httpapi.spec/file-metadata-get new-metadata))
