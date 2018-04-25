@@ -1,6 +1,7 @@
 (ns witan.httpapi.queries
   (:require [witan.httpapi.components.requests :as requests]
             [witan.httpapi.response-codes :refer :all]
+            [taoensso.timbre :as log]
             [kixi.group :as group]))
 
 (defn encode-kw
@@ -48,7 +49,7 @@
                               :content-type :json
                               :headers (user-header user)})
         {:keys [items]} r]
-    (log/debug "Search /metdata returned:" s r)
+    (log/debug "Search /metadata returned:" s r)
     [s (-> r
            (assoc :files items) ;;maintain pre-search api
            (dissoc :items))]))
