@@ -41,7 +41,7 @@
   (let [[s r] (requests/POST requester
                              :search
                              "/metadata"
-                             {:form-params (merge {:kixi.datastore.metadatastore.query/type {:equals "stored"}}
+                             {:form-params (merge {:query {:kixi.datastore.metadatastore.query/type {:equals "stored"}}}
                                                   (when count
                                                     {:size count})
                                                   (when index
