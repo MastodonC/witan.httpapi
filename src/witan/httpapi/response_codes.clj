@@ -19,4 +19,5 @@
     SEE_OTHER    "See Other"
     BAD_REQUEST  "Bad Request"
     UNAUTHORISED "Unauthorised"
-    NOT_FOUND    "Not Found"))
+    NOT_FOUND    "Not Found"
+    (str "Unknown code: " c)))
