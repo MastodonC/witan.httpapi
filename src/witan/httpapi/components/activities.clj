@@ -282,6 +282,33 @@
     (return-receipt id)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Datapacks
+
+(defn create-datapack!
+  [{:keys [comms database]} user md id]
+  (let [payload' (-> md
+                     (assoc :kixi.datastore.metadatastore/id id
+                            :kixi.datastore.metadatastore/type "bundle"
+                            :kixi.datastore.metadatastore/bundle-type "datapack"
+                            :kixi.datastore.metadatastore/provenance {:kixi.datastore.metadatastore/source "upload"
+                                                                      :kixi.datastore.metadatastore/created (comms/timestamp)
+                                                                      :kixi.user/id (:kixi.user/id user)}
+                            :kixi.datastore.metadatastore/sharing {:kixi.datastore.metadatastore/meta-read #{(:kixi.user/self-group user)}
+                                                                   :kixi.datastore.metadatastore/meta-update #{(:kixi.user/self-group user)}
+                                                                   :kixi.datastore.metadatastore/bundle-add #{(:kixi.user/self-group user)}})
+                     (update :kixi.datastore.metadatastore/bundled-ids set)
+                     (update :kixi.datastore.metadatastore/tags set))]
+
+    (create-receipt! database user id)
+    (send-valid-command!* comms (merge {::command/id id
+                                        ::command/type :kixi.datastore/create-datapack
+                                        ::command/version "1.0.0"
+                                        :kixi/user user}
+                                       payload')
+                          {:partition-key id})
+    (return-receipt id)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
 
 (defn get-metadatastore-id
@@ -328,18 +355,38 @@
       (let [file-id (:kixi.datastore.metadatastore/id payload)]
         (complete-receipt! db command-id (str "/api/files/" file-id "/metadata"))))))
 
+(defn datapack-created-event?
+  [payload]
+  (and (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-created)
+       (= (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/type]) "bundle")
+       (= (get-in payload [:kixi.datastore.metadatastore/file-metadata :kixi.datastore.metadatastore/bundle-type]) "datapack")))
+
 (defmethod on-event
   [:kixi.datastore.file-metadata/updated "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (cond
     (or (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-update)
-        (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-sharing-updated))
+        (= (::kdcs/file-metadata-update-type payload) ::kdcs/file-metadata-sharing-updated)
+        ;; datapack created?
+        (datapack-created-event? payload))
     (when-let [command-id (:kixi.comms.command/id event)]
       (when (retrieve-receipt db command-id)
         (complete-receipt! db command-id nil)))))
 
 (defmethod on-event
   [:kixi.datastore.metadatastore/update-rejected "1.0.0"]
+  [db {:keys [kixi.comms.event/payload] :as event}]
+  (when-let [command-id (:kixi.comms.command/id event)]
+    (when-let [receipt (retrieve-receipt db command-id)]
+      (if-let [file-id (get-metadatastore-id payload)]
+        (complete-receipt!
+         db
+         command-id
+         (create-error! db command-id file-id (-> payload :reason name)))
+        (log/error "Could't find a metadatastore ID in payload:" payload)))))
+
+(defmethod on-event
+  [:kixi.datastore.metadatastore/sharing-change-rejected "1.0.0"]
   [db {:keys [kixi.comms.event/payload] :as event}]
   (when-let [command-id (:kixi.comms.command/id event)]
     (when-let [receipt (retrieve-receipt db command-id)]
