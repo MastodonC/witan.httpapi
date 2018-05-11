@@ -100,7 +100,7 @@
   ([auth name id]
    (log/info "Uploading a new datapack as part of the fixture.")
    (if-let [success? (create-empty-datapack auth name id)]
-     (let [datapack (get-datapack auth id)]
+     (let [datapack (wait-for-pred #(get-datapack auth id))]
        (if-not (and datapack (is-spec :witan.httpapi.spec/datapack-metadata-get datapack))
          (throw (Exception. (str "Datapack was invalid " (spec/explain-data :witan.httpapi.spec/datapack-metadata-get datapack))))
          datapack))

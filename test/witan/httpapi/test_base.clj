@@ -59,6 +59,21 @@
          url)
     (throw (Exception. "Not a map!"))))
 
+(defn wait-for-pred
+  ([p]
+   (wait-for-pred p wait-tries))
+  ([p tries]
+   (wait-for-pred p tries wait-per-try))
+  ([p tries ms]
+   (loop [try tries]
+     (when (and (pos? try))
+       (let [result (p)]
+         (if (not result)
+           (do
+             (Thread/sleep ms)
+             (recur (dec try)))
+           result))))))
+
 (defn wait-for-receipt
   ([auth receipt-resp]
    (wait-for-receipt auth (receipt-resp->receipt-url receipt-resp) wait-tries 1 nil))
