@@ -264,12 +264,19 @@
       (is-spec :witan.httpapi.spec/file-metadata-get (:body (coerce-response r))))))
 
 (deftest get-metadata-sharing-test
-  (let [auth (get-auth-tokens)
-        r @(http/get (url (str "/api/files/" @file-id "/sharing"))
-                     (with-default-opts
-                       {:headers {:authorization (:auth-token auth)}}))]
-    (when-success r
-      (is-spec :witan.httpapi.spec/meta-sharing (:body (coerce-response r))))))
+  (let [auth (get-auth-tokens)]
+    (testing "files"
+      (let [r @(http/get (url (str "/api/files/" @file-id "/sharing"))
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))]
+        (when-success r
+          (is-spec :witan.httpapi.spec/meta-sharing (:body (coerce-response r))))))
+    (testing "datapacks"
+      (let [r @(http/get (url (str "/api/datapacks/" @datapack-id "/sharing"))
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))]
+        (when-success r
+          (is-spec :witan.httpapi.spec/meta-sharing (:body (coerce-response r))))))))
 
 (deftest update-metadata-test
   (let [auth (get-auth-tokens)
@@ -372,11 +379,12 @@
             (when-success receipt-resp
               (is-spec ::s/download-link-response (:body (coerce-response receipt-resp))))))))))
 
-(deftest sharing-update-test
+(defn metadata-sharing-update-test
+  [url-prefix md-id]
   (let [auth (get-auth-tokens)
         new-grp (uuid)]
     (testing "Adding a new group to the sharing properties of our file"
-      (let [r @(http/post (url (str "/api/files/" @file-id "/sharing"))
+      (let [r @(http/post (url (str url-prefix md-id "/sharing"))
                           (with-default-opts
                             {:form-params {:activity ::ms/file-read
                                            :operation "add"
@@ -386,13 +394,13 @@
           (let [receipt-resp (wait-for-receipt auth r)]
             (when-success receipt-resp
               (Thread/sleep 4000) ;; eventual consistency, innit
-              (let [sharing-r @(http/get (url (str "/api/files/" @file-id "/sharing"))
+              (let [sharing-r @(http/get (url (str url-prefix md-id "/sharing"))
                                          (with-default-opts
                                            {:headers {:authorization (:auth-token auth)}}))]
                 (is (contains? (set (get-in sharing-r [:body ::ms/sharing ::ms/file-read])) new-grp))))))))
 
     (testing "Removing a group from the sharing properties of our file"
-      (let [r @(http/post (url (str "/api/files/" @file-id "/sharing"))
+      (let [r @(http/post (url (str url-prefix md-id "/sharing"))
                           (with-default-opts
                             {:form-params {:activity ::ms/file-read
                                            :operation "remove"
@@ -402,13 +410,13 @@
           (Thread/sleep 4000) ;; eventual consistency, innit
           (let [receipt-resp (wait-for-receipt auth r)]
             (when-success receipt-resp
-              (let [sharing-r @(http/get (url (str "/api/files/" @file-id "/sharing"))
+              (let [sharing-r @(http/get (url (str url-prefix md-id "/sharing"))
                                          (with-default-opts
                                            {:headers {:authorization (:auth-token auth)}}))]
                 (is (not (contains? (set (get-in sharing-r [:body ::ms/sharing ::ms/file-read])) new-grp)))))))))
 
     (testing "Adding a new group to the sharing properties of a file that DOESN'T exist"
-      (let [r @(http/post (url (str "/api/files/" (uuid) "/sharing"))
+      (let [r @(http/post (url (str url-prefix (uuid) "/sharing"))
                           (with-default-opts
                             {:form-params {:activity ::ms/file-read
                                            :operation "add"
@@ -419,12 +427,18 @@
             (when-success receipt-resp
               (is (= "unauthorised" (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))))))
 
+(deftest files-sharing-update-test
+  (metadata-sharing-update-test "/api/files/" @file-id))
+
+(deftest datapack-sharing-update-test
+  (metadata-sharing-update-test "/api/datapacks/" @datapack-id))
+
 (deftest add-remove-files-datapack-test
   (let [auth (get-auth-tokens)]
     (testing "adding a file"
-      (let [r @(http/put (url (str "/api/datapacks/" @datapack-id "/files/" @file-id))
-                         (with-default-opts
-                           {:headers {:authorization (:auth-token auth)}}))]
+      (let [r @(http/post (url (str "/api/datapacks/" @datapack-id "/files/" @file-id))
+                          (with-default-opts
+                            {:headers {:authorization (:auth-token auth)}}))]
         (when-accepted r
           (let [receipt-resp (wait-for-receipt auth r)]
             (when-success receipt-resp
@@ -460,17 +474,17 @@
   (let [auth (get-auth-tokens)
         id (uuid)]
     (testing "adding to a missing datapack"
-      (let [r @(http/put (url (str "/api/datapacks/" id "/files/" @file-id))
-                         (with-default-opts
-                           {:headers {:authorization (:auth-token auth)}}))]
+      (let [r @(http/post (url (str "/api/datapacks/" id "/files/" @file-id))
+                          (with-default-opts
+                            {:headers {:authorization (:auth-token auth)}}))]
         (when-accepted r
           (let [receipt-resp (wait-for-receipt auth r)]
             (when-success receipt-resp
               (is (= "incorrect-type" (get-in receipt-resp [:body :error :witan.httpapi.spec/reason])))))))) ;; why incorrect-type???
     (testing "adding to a file.. ?"
-      (let [r @(http/put (url (str "/api/datapacks/" @file-id "/files/" @file-id))
-                         (with-default-opts
-                           {:headers {:authorization (:auth-token auth)}}))]
+      (let [r @(http/post (url (str "/api/datapacks/" @file-id "/files/" @file-id))
+                          (with-default-opts
+                            {:headers {:authorization (:auth-token auth)}}))]
         (when-accepted r
           (let [receipt-resp (wait-for-receipt auth r)]
             (when-success receipt-resp

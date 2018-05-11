@@ -95,6 +95,14 @@
         [NOT_FOUND nil])
       [status cds-response])))
 
+(defn get-datapack-sharing-info [requester user id]
+  (let [[status cds-response] (get-metadata-info requester user id)]
+    (if (= status OK)
+      (if (datapack? cds-response)
+        [status (select-keys cds-response [:kixi.datastore.metadatastore/sharing])]
+        [NOT_FOUND nil])
+      [status cds-response])))
+
 (def get-datapacks-by-user
   (partial get-query-by-user
            {:kixi.datastore.metadatastore.query/type {:equals "bundle"}
