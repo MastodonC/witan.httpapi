@@ -298,7 +298,7 @@
               (success ACCEPTED r headers)
               (fail s))))
 
-        (PUT "/files/:file-id" req
+        (POST "/files/:file-id" req
           :summary "Adds a file to a datapack"
           :path-params [id :- ::s/id
                         file-id :- ::s/id]
