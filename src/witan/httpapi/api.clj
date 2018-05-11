@@ -296,6 +296,34 @@
                                id)]
             (if (success? s)
               (success ACCEPTED r headers)
+              (fail s))))
+
+        (PUT "/files/:file-id" req
+          :summary "Adds a file to a datapack"
+          :path-params [id :- ::s/id
+                        file-id :- ::s/id]
+          :return ::s/receipt-id-container
+          (let [[s r headers] (activities/add-file-to-datapack!
+                               (activities req)
+                               (user req)
+                               id
+                               file-id)]
+            (if (success? s)
+              (success ACCEPTED r headers)
+              (fail s))))
+
+        (DELETE "/files/:file-id" req
+          :summary "Removes a file from a datapack"
+          :path-params [id :- ::s/id
+                        file-id :- ::s/id]
+          :return ::s/receipt-id-container
+          (let [[s r headers] (activities/remove-file-from-datapack!
+                               (activities req)
+                               (user req)
+                               id
+                               file-id)]
+            (if (success? s)
+              (success ACCEPTED r headers)
               (fail s))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

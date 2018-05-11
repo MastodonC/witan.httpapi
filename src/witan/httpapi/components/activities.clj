@@ -285,9 +285,10 @@
 ;; Datapacks
 
 (defn create-datapack!
-  [{:keys [comms database]} user md id]
-  (let [payload' (-> md
-                     (assoc :kixi.datastore.metadatastore/id id
+  [{:keys [comms database]} user md datapack-id]
+  (let [id (comms/uuid)
+        payload' (-> md
+                     (assoc :kixi.datastore.metadatastore/id datapack-id
                             :kixi.datastore.metadatastore/type "bundle"
                             :kixi.datastore.metadatastore/bundle-type "datapack"
                             :kixi.datastore.metadatastore/provenance {:kixi.datastore.metadatastore/source "upload"
@@ -305,7 +306,35 @@
                                         ::command/version "1.0.0"
                                         :kixi/user user}
                                        payload')
-                          {:partition-key id})
+                          {:partition-key datapack-id})
+    (return-receipt id)))
+
+(defn add-file-to-datapack!
+  [{:keys [comms database]} user datapack-id file-id]
+  (let [id (comms/uuid)
+        payload {:kixi.datastore.metadatastore/id datapack-id
+                 :kixi.datastore.metadatastore/bundled-ids #{file-id}}]
+    (create-receipt! database user id)
+    (comms/send-valid-command! comms (merge {::command/id id
+                                             ::command/type :kixi.datastore/add-files-to-bundle
+                                             ::command/version "1.0.0"
+                                             :kixi/user user}
+                                            payload)
+                               {:partition-key datapack-id})
+    (return-receipt id)))
+
+(defn remove-file-from-datapack!
+  [{:keys [comms database]} user datapack-id file-id]
+  (let [id (comms/uuid)
+        payload {:kixi.datastore.metadatastore/id datapack-id
+                 :kixi.datastore.metadatastore/bundled-ids #{file-id}}]
+    (create-receipt! database user id)
+    (comms/send-valid-command! comms (merge {::command/id id
+                                             ::command/type :kixi.datastore/remove-files-from-bundle
+                                             ::command/version "1.0.0"
+                                             :kixi/user user}
+                                            payload)
+                               {:partition-key datapack-id})
     (return-receipt id)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -314,12 +343,16 @@
 (defn get-metadatastore-id
   [payload]
   (or (get-in payload [::ms/id])
+      (get-in payload [:kixi.datastore.metadatastore.relaxed/id])
       (get-in payload [:original ::ms/id])
       (get-in payload [:original ::ms/payload :kixi.comms.command/payload ::ms/id])))
 
 (defmulti on-event
-  (fn [_ {:keys [kixi.comms.event/key
-                 kixi.comms.event/version]}] [key version]))
+  (fn [_ e]
+    [(or (:kixi.comms.event/key e)
+         (:kixi.event/type e))
+     (or (:kixi.comms.event/version e)
+         (:kixi.event/version e))]))
 
 (defmethod on-event
   [:kixi.datastore.filestore/upload-link-created "1.0.0"]
@@ -409,10 +442,60 @@
          (create-error! db command-id file-id (-> payload :reason name)))
         (log/error "Could't find a metadatastore ID in payload:" payload)))))
 
+(defmethod on-event
+  [:kixi.datastore/files-added-to-bundle "1.0.0"]
+  [db event]
+  (when-let [command-id (:kixi.command/id event)]
+    (when-let [receipt (retrieve-receipt db command-id)]
+      (if-let [file-id (get-metadatastore-id event)]
+        (complete-receipt!
+         db
+         command-id
+         nil #_(str "/api/datapacks/" file-id "/metadata"))
+        (log/error "Could't find a metadatastore ID in payload:" event)))))
+
+(defmethod on-event
+  [:kixi.datastore/files-add-to-bundle-rejected "2.0.0"]
+  [db event]
+  (when-let [command-id (:kixi.command/id event)]
+    (when-let [receipt (retrieve-receipt db command-id)]
+      (if-let [file-id (get-metadatastore-id event)]
+        (complete-receipt!
+         db
+         command-id
+         (create-error! db command-id file-id (name (or (:reason event)
+                                                        (:kixi.event.bundle.addfiles.rejection/reason event)))))
+        (log/error "Could't find a metadatastore ID in payload:" event)))))
+
+(defmethod on-event
+  [:kixi.datastore/files-removed-from-bundle "1.0.0"]
+  [db event]
+  (when-let [command-id (:kixi.command/id event)]
+    (when-let [receipt (retrieve-receipt db command-id)]
+      (if-let [file-id (get-metadatastore-id event)]
+        (complete-receipt!
+         db
+         command-id
+         nil #_(str "/api/datapacks/" file-id "/metadata"))
+        (log/error "Could't find a metadatastore ID in payload:" event)))))
+
+(defmethod on-event
+  [:kixi.datastore/files-remove-from-bundle-rejected "1.0.0"]
+  [db event]
+  (when-let [command-id (:kixi.command/id event)]
+    (when-let [receipt (retrieve-receipt db command-id)]
+      (if-let [file-id (get-metadatastore-id event)]
+        (complete-receipt!
+         db
+         command-id
+         (create-error! db command-id file-id (name (or (:reason event)
+                                                        (:kixi.event.bundle.removefiles.rejection/reason event)))))
+        (log/error "Could't find a metadatastore ID in payload:" event)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 
-(def event-handlers
+(def event-handlers-old
   {:kixi.datastore.filestore/upload-link-created         ["1.0.0" :witan-httpapi-activity-upload-file]
    :kixi.datastore.file-metadata/rejected                ["1.0.0" :witan-httpapi-activity-file-metadata-rejected]
    :kixi.datastore.file/created                          ["1.0.0" :witan-httpapi-activity-file-created]
@@ -420,16 +503,28 @@
    :kixi.datastore.metadatastore/update-rejected         ["1.0.0" :witan-httpapi-activity-metadata-update-rejected]
    :kixi.datastore.metadatastore/sharing-change-rejected ["1.0.0" :witan-httpapi-activity-sharing-change-rejected]})
 
-(defn event-data->handler
+(def event-handlers-new
+  {:kixi.datastore/files-added-to-bundle                 ["1.0.0" :witan-httpapi-activity-files-added-to-bundle]
+   :kixi.datastore/files-add-to-bundle-rejected          ["2.0.0" :witan-httpapi-activity-files-add-to-bundle-rejected]
+   :kixi.datastore/files-removed-from-bundle             ["1.0.0" :witan-httpapi-activity-files-removed-from-bundle]
+   :kixi.datastore/files-remove-from-bundle-rejected     ["1.0.0" :witan-httpapi-activity-files-remove-from-bundle-rejected]})
+
+(defn event-data-old->handler
   [{:keys [comms database]} [type [version group]]]
   (comms/attach-event-handler!
+   comms group type version (partial on-event database)))
+
+(defn event-data-new->handler
+  [{:keys [comms database]} [type [version group]]]
+  (comms/attach-validating-event-handler!
    comms group type version (partial on-event database)))
 
 (defrecord Activities []
   component/Lifecycle
   (start [{:keys [comms database] :as component}]
     (log/info "Starting Activities" (type comms))
-    (let [ehs (mapv (partial event-data->handler component) event-handlers)]
+    (let [ehs (concat (mapv (partial event-data-old->handler component) event-handlers-old)
+                      (mapv (partial event-data-new->handler component) event-handlers-new))]
       (assoc component :ehs ehs)))
 
   (stop [{:keys [comms] :as component}]
