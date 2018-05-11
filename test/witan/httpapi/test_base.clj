@@ -295,5 +295,5 @@
                          :content-type :json
                          :as :json
                          :headers {:authorization (:auth-token auth)}})]
-    (when-success resp
+    (when (= 200 (:status resp))
       (:body (api/coerce-response resp)))))
