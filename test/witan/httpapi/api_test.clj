@@ -174,7 +174,15 @@
                      (with-default-opts
                        {:headers {:authorization (:auth-token auth)}}))]
     (when-success r
-      (is-spec :witan.httpapi.spec/paged-metadata-items (:body (coerce-response r))))))
+      (is-spec :witan.httpapi.spec/paged-files (:body (coerce-response r))))))
+
+(deftest get-datapacks-test
+  (let [auth (get-auth-tokens)
+        r @(http/get (url "/api/datapacks")
+                     (with-default-opts
+                       {:headers {:authorization (:auth-token auth)}}))]
+    (when-success r
+      (is-spec :witan.httpapi.spec/paged-datapacks (:body (coerce-response r))))))
 
 (deftest get-groups-test
   (let [auth (get-auth-tokens)
