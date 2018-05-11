@@ -324,6 +324,34 @@
                                file-id)]
             (if (success? s)
               (success ACCEPTED r headers)
+              (fail s))))
+
+        (GET "/sharing" req
+             :summary "Return sharing data for a specific datapack"
+          :path-params [id :- ::s/id]
+          :return ::s/meta-sharing
+          (let [[s r] (query/get-datapack-sharing-info (requester req) (:user req) id)]
+            (if (success? s)
+              (success s r)
+              (fail s))))
+
+        (POST "/sharing" req
+          :summary "Add a group to the specified datapack with a particular permission"
+          :path-params [id :- ::s/id]
+          :body-params [activity :- ::kdm/activity
+                        group-id :- ::group/id
+                        operation :- ::s/sharing-operation]
+          :return ::s/receipt-id-container
+          ;; HACK; we don't actually check whether this is a datapack
+          (let [[s r headers] (activities/update-sharing!
+                               (activities req)
+                               (user req)
+                               id
+                               operation
+                               activity
+                               group-id)]
+            (if (success? s)
+              (success ACCEPTED r headers)
               (fail s))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
