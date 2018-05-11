@@ -418,3 +418,68 @@
           (let [receipt-resp (wait-for-receipt auth r)]
             (when-success receipt-resp
               (is (= "unauthorised" (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))))))
+
+(deftest add-remove-files-datapack-test
+  (let [auth (get-auth-tokens)]
+    (testing "adding a file"
+      (let [r @(http/put (url (str "/api/datapacks/" @datapack-id "/files/" @file-id))
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))]
+        (when-accepted r
+          (let [receipt-resp (wait-for-receipt auth r)]
+            (when-success receipt-resp
+              (is (wait-for-pred
+                   #(let [datapack (get-datapack auth @datapack-id)]
+                      (contains? (::ms/bundled-ids datapack) @file-id)))))))))
+    (testing "removing a file"
+      (let [r @(http/delete (url (str "/api/datapacks/" @datapack-id "/files/" @file-id))
+                            (with-default-opts
+                              {:headers {:authorization (:auth-token auth)}}))]
+        (when-accepted r
+          (let [receipt-resp (wait-for-receipt auth r)]
+            (when-success receipt-resp
+              (is (wait-for-pred
+                   #(let [datapack (get-datapack auth @datapack-id)]
+                      (not (contains? (::ms/bundled-ids datapack) @file-id))))))))))))
+
+(deftest add-remove-files-datapack-missing-file-test
+  (testing "removing a file that's not there"
+    (let [auth (get-auth-tokens)
+          id (uuid)
+          r @(http/delete (url (str "/api/datapacks/" @datapack-id "/files/" id))
+                          (with-default-opts
+                            {:headers {:authorization (:auth-token auth)}}))]
+      (when-accepted r
+        (let [receipt-resp (wait-for-receipt auth r)]
+          (when-success receipt-resp
+            (is (wait-for-pred
+                 #(let [datapack (get-datapack auth @datapack-id)]
+                    (not (contains? (::ms/bundled-ids datapack) id)))))))))))
+
+(deftest add-remove-files-datapack-bad-datapack-test
+  (let [auth (get-auth-tokens)
+        id (uuid)]
+    (testing "adding to a missing datapack"
+      (let [r @(http/put (url (str "/api/datapacks/" id "/files/" @file-id))
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))]
+        (when-accepted r
+          (let [receipt-resp (wait-for-receipt auth r)]
+            (when-success receipt-resp
+              (is (= "incorrect-type" (get-in receipt-resp [:body :error :witan.httpapi.spec/reason])))))))) ;; why incorrect-type???
+    (testing "adding to a file.. ?"
+      (let [r @(http/put (url (str "/api/datapacks/" @file-id "/files/" @file-id))
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))]
+        (when-accepted r
+          (let [receipt-resp (wait-for-receipt auth r)]
+            (when-success receipt-resp
+              (is (= "incorrect-type" (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))))
+    (testing "removing from a missing datapack"
+      (let [r @(http/delete (url (str "/api/datapacks/" id "/files/" @file-id))
+                            (with-default-opts
+                              {:headers {:authorization (:auth-token auth)}}))]
+        (when-accepted r
+          (let [receipt-resp (wait-for-receipt auth r)]
+            (when-success receipt-resp
+              (is (= "unauthorised" (get-in receipt-resp [:body :error :witan.httpapi.spec/reason]))))))))))

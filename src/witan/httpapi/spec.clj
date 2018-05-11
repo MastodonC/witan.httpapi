@@ -24,6 +24,7 @@
 (alias 'kdmu-geography 'kixi.datastore.metadatastore.geography.update)
 (alias 'kdmu-license 'kixi.datastore.metadatastore.license.update)
 (alias 'kdmu-time 'kixi.datastore.metadatastore.time.update)
+(alias 'kdmr 'kixi.datastore.metadatastore.relaxed)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This is so that context-level header-params
@@ -256,3 +257,67 @@
   [::kd/create-datapack "1.0.0"]
   [_]
   ::datapack-info)
+
+(defmethod comms/command-payload
+  [:kixi.datastore/add-files-to-bundle "1.0.0"]
+  [_]
+  (s/keys :req [::kdm/id
+                ::kdm/bundled-ids]))
+
+(defmethod comms/command-payload
+  [:kixi.datastore/remove-files-from-bundle "1.0.0"]
+  [_]
+  (s/keys :req [::kdm/id
+                ::kdm/bundled-ids]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Events
+
+;; https://github.com/MastodonC/kixi.datastore/blob/master/src/kixi/datastore/metadatastore/events.clj#L68
+
+(s/def ::spec-explain any?)
+
+(defmethod comms/event-payload
+  [:kixi.datastore/files-added-to-bundle "1.0.0"]
+  [_]
+  (s/keys :req [::kdm/id
+                ::kdm/bundled-ids]))
+
+(alias 'fab-reject 'kixi.event.bundle.addfiles.rejection)
+
+(s/def ::fab-reject/reason
+  #{:unauthorised
+    :incorrect-type
+    :invalid-cmd})
+
+(defmethod comms/event-payload
+  [:kixi.datastore/files-add-to-bundle-rejected "2.0.0"]
+  [_]
+  (s/keys :req [::kdmr/id
+                ::kdmr/bundled-ids]
+          :req-un [::fab-reject/reason]
+          :opt-un [::spec-explain]))
+
+
+(defmethod comms/event-payload
+  [:kixi.datastore/files-removed-from-bundle "1.0.0"]
+  [_]
+  (s/keys :req [::kdm/id
+                ::kdm/bundled-ids]))
+
+(alias 'frb-reject 'kixi.event.bundle.removefiles.rejection)
+
+(s/def ::frb-reject/reason
+  #{:unauthorised
+    :incorrect-type
+    :invalid-cmd})
+
+(defmethod comms/event-payload
+  [:kixi.datastore/files-remove-from-bundle-rejected "1.0.0"]
+  [_]
+  (s/keys :req [::kdm/id
+                ::kdm/bundled-ids]
+          :req-un [::fab-reject/reason]
+          :opt-un [::spec-explain]))
+
+;;
