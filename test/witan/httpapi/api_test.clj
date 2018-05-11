@@ -436,9 +436,9 @@
 (deftest add-remove-files-datapack-test
   (let [auth (get-auth-tokens)]
     (testing "adding a file"
-      (let [r @(http/put (url (str "/api/datapacks/" @datapack-id "/files/" @file-id))
-                         (with-default-opts
-                           {:headers {:authorization (:auth-token auth)}}))]
+      (let [r @(http/post (url (str "/api/datapacks/" @datapack-id "/files/" @file-id))
+                          (with-default-opts
+                            {:headers {:authorization (:auth-token auth)}}))]
         (when-accepted r
           (let [receipt-resp (wait-for-receipt auth r)]
             (when-success receipt-resp
@@ -474,17 +474,17 @@
   (let [auth (get-auth-tokens)
         id (uuid)]
     (testing "adding to a missing datapack"
-      (let [r @(http/put (url (str "/api/datapacks/" id "/files/" @file-id))
-                         (with-default-opts
-                           {:headers {:authorization (:auth-token auth)}}))]
+      (let [r @(http/post (url (str "/api/datapacks/" id "/files/" @file-id))
+                          (with-default-opts
+                            {:headers {:authorization (:auth-token auth)}}))]
         (when-accepted r
           (let [receipt-resp (wait-for-receipt auth r)]
             (when-success receipt-resp
               (is (= "incorrect-type" (get-in receipt-resp [:body :error :witan.httpapi.spec/reason])))))))) ;; why incorrect-type???
     (testing "adding to a file.. ?"
-      (let [r @(http/put (url (str "/api/datapacks/" @file-id "/files/" @file-id))
-                         (with-default-opts
-                           {:headers {:authorization (:auth-token auth)}}))]
+      (let [r @(http/post (url (str "/api/datapacks/" @file-id "/files/" @file-id))
+                          (with-default-opts
+                            {:headers {:authorization (:auth-token auth)}}))]
         (when-accepted r
           (let [receipt-resp (wait-for-receipt auth r)]
             (when-success receipt-resp
