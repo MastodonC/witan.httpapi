@@ -67,6 +67,8 @@
 (def file-id (atom nil))
 (def file-metadata (atom nil))
 
+(def datapack-id (atom nil))
+
 (defn upload-new-file
   [all-tests]
   (let [auth (get-auth-tokens)
@@ -90,11 +92,43 @@
   (let [m (create-metadata file-name)
         new-metadata (send-file-and-metadata auth file-name m)]
     (when-not (and new-metadata (is-spec :witan.httpapi.spec/file-metadata-get new-metadata))
-      (throw (Exception. (str "Couldn't upload metadata: " new-metadata))))))
+      (throw (Exception. (str "Couldn't upload file metadata: " new-metadata))))))
+
+(defn create-datapack-inline
+  ([auth name]
+   (create-datapack-inline auth name (uuid)))
+  ([auth name id]
+   (log/info "Uploading a new datapack as part of the fixture.")
+   (if-let [success? (create-empty-datapack auth name id)]
+     (let [datapack (wait-for-pred #(get-datapack auth id))]
+       (if-not (and datapack (is-spec :witan.httpapi.spec/datapack-metadata-get datapack))
+         (throw (Exception. (str "Datapack was invalid " (spec/explain-data :witan.httpapi.spec/datapack-metadata-get datapack))))
+         datapack))
+     (throw (Exception. (str "Couldn't upload datapack metadata"))))))
+
+(defn create-new-datapack
+  [all-tests]
+  (let [id (uuid)
+        auth (get-auth-tokens)
+        name (str "fixture-datapack-" (rand-int Integer/MAX_VALUE))
+        datapack (create-datapack-inline auth name id)]
+    (if-let [err (cond
+                   (not datapack) "returned nil"
+                   (not= id (::ms/id datapack)) "id didn't match"
+                   (not= name (::ms/name datapack)) "name didn't match"
+                   :else nil)]
+      (throw (Exception. (str "Couldn't create datapack - " err)))
+      (do
+        (reset! datapack-id (::ms/id datapack))
+        (all-tests)
+        (reset! datapack-id nil)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-fixtures :once start-system upload-new-file)
+(use-fixtures :once
+  start-system
+  upload-new-file
+  create-new-datapack)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -140,7 +174,15 @@
                      (with-default-opts
                        {:headers {:authorization (:auth-token auth)}}))]
     (when-success r
-      (is-spec :witan.httpapi.spec/paged-metadata-items (:body (coerce-response r))))))
+      (is-spec :witan.httpapi.spec/paged-files (:body (coerce-response r))))))
+
+(deftest get-datapacks-test
+  (let [auth (get-auth-tokens)
+        r @(http/get (url "/api/datapacks")
+                     (with-default-opts
+                       {:headers {:authorization (:auth-token auth)}}))]
+    (when-success r
+      (is-spec :witan.httpapi.spec/paged-datapacks (:body (coerce-response r))))))
 
 (deftest get-groups-test
   (let [auth (get-auth-tokens)
@@ -168,6 +210,29 @@
 
     (testing "Is the index being increased?"
       (let [r @(http/get (url "/api/files?index=1")
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))
+            {:keys [total count index]} (get-paging r)]
+        (is (= 1 index))))))
+
+(deftest get-datapacks-paging-test
+  (let [auth (get-auth-tokens)
+        r @(http/get (url "/api/datapacks")
+                     (with-default-opts
+                       {:headers {:authorization (:auth-token auth)}}))]
+    (when (= 1 (:total (get-paging r)))
+      ;; upload a new metadata - so we know there's more than 1
+      (create-datapack-inline auth (str "get-datapacks-paging-test-" (rand-int Integer/MAX_VALUE))))
+
+    (testing "Is the number of results being limited?"
+      (let [r @(http/get (url "/api/datapacks?count=1")
+                         (with-default-opts
+                           {:headers {:authorization (:auth-token auth)}}))
+            {:keys [total count index]} (get-paging r)]
+        (is (= 1 count))))
+
+    (testing "Is the index being increased?"
+      (let [r @(http/get (url "/api/datapacks?index=1")
                          (with-default-opts
                            {:headers {:authorization (:auth-token auth)}}))
             {:keys [total count index]} (get-paging r)]
@@ -204,7 +269,7 @@
                      (with-default-opts
                        {:headers {:authorization (:auth-token auth)}}))]
     (when-success r
-      (is-spec :witan.httpapi.spec/file-sharing (:body (coerce-response r))))))
+      (is-spec :witan.httpapi.spec/meta-sharing (:body (coerce-response r))))))
 
 (deftest update-metadata-test
   (let [auth (get-auth-tokens)

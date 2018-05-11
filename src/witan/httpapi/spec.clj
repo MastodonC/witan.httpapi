@@ -20,6 +20,7 @@
             [kixi.user :as user]
             [kixi.group :as group]))
 
+(alias 'kd 'kixi.datastore)
 (alias 'kdmu-geography 'kixi.datastore.metadatastore.geography.update)
 (alias 'kdmu-license 'kixi.datastore.metadatastore.license.update)
 (alias 'kdmu-time 'kixi.datastore.metadatastore.time.update)
@@ -86,6 +87,7 @@
                 ::kdm/file-type
                 ::kdm/header
                 ::kdm/name]
+          ;; id is provided by path
           :opt [::kdm-time/temporal-coverage
                 ::kdm-geography/geography
                 ::kdm/source-created
@@ -95,16 +97,50 @@
                 ::kdm/author
                 ::kdm/source
                 ::kdm/maintainer
-                ::kdm/name
                 ::kdm/description
                 ::kdm/logo]))
 
-(s/def ::file-sharing
+(s/def ::datapack-metadata-get
+  (s/keys :req [::kdm/name
+                ::kdm/id
+                ::kdm/type
+                ::kdm/bundle-type
+                ::kdm/provenance]
+          :opt [::kdm/bundled-ids
+                ::kdm/description
+                ::kdm/logo
+                ::kdm/tags
+                ::kdm-license/license
+                ::kdm/author
+                ::kdm/maintainer
+                ::kdm/source
+                ::kdm/source-created
+                ::kdm/source-updated
+                ::kdm-time/temporal-coverage
+                ::kdm-geography/geography]))
+
+(s/def ::datapack-metadata-put
+  (s/keys :req [::kdm/name]
+          ;; id is provided by path
+          :opt [::kdm/bundled-ids
+                ::kdm-time/temporal-coverage
+                ::kdm-geography/geography
+                ::kdm/source-created
+                ::kdm/source-updated
+                ::kdm-license/license
+                ::kdm/tags
+                ::kdm/author
+                ::kdm/source
+                ::kdm/maintainer
+                ::kdm/description
+                ::kdm/logo]))
+
+(s/def ::meta-sharing
   (s/keys :req [::kdm/sharing]))
 
 (s/def ::file-info
   (s/merge ::file-metadata-get
-           ::file-sharing))
+           ::meta-sharing))
 
 (s/def ::metadata-update
   (s/merge (s/keys :req [::kdm/id])
@@ -119,6 +155,10 @@
                 ::kdm/sharing-update
                 ::group/id]))
 
+(s/def ::datapack-info
+  (s/merge ::datapack-metadata-get
+           ::meta-sharing))
+
 ;; Files
 (s/def ::total spec/int?)
 (s/def ::count spec/int?)
@@ -128,7 +168,9 @@
 (s/def ::paged-items (s/keys :req-un [::items ::paging]))
 
 (s/def ::files (s/coll-of ::file-info))
-(s/def ::paged-metadata-items (s/keys :req-un [::files ::paging]))
+(s/def ::datapacks (s/coll-of ::datapack-info))
+(s/def ::paged-files (s/keys :req-un [::files ::paging]))
+(s/def ::paged-datapacks (s/keys :req-un [::datapacks ::paging]))
 
 ;; Groups
 (s/def ::group-info (s/keys :req [::group/id ::group/name ::group/type]))
@@ -209,3 +251,8 @@
   [::kdm/sharing-change "1.0.0"]
   [_]
   ::sharing-command)
+
+(defmethod comms/command-payload
+  [::kd/create-datapack "1.0.0"]
+  [_]
+  ::datapack-info)

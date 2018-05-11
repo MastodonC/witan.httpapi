@@ -59,6 +59,21 @@
          url)
     (throw (Exception. "Not a map!"))))
 
+(defn wait-for-pred
+  ([p]
+   (wait-for-pred p wait-tries))
+  ([p tries]
+   (wait-for-pred p tries wait-per-try))
+  ([p tries ms]
+   (loop [try tries]
+     (when (and (pos? try))
+       (let [result (p)]
+         (if (not result)
+           (do
+             (Thread/sleep ms)
+             (recur (dec try)))
+           result))))))
+
 (defn wait-for-receipt
   ([auth receipt-resp]
    (wait-for-receipt auth (receipt-resp->receipt-url receipt-resp) wait-tries 1 nil))
@@ -256,3 +271,29 @@
                   (is-submap metadata (:body (api/coerce-response receipt-resp)))
                   (:body (api/coerce-response receipt-resp)))
                 (println "Error was returned:" (-> receipt-resp :body :error) "\nIf error is `file-not-exist` it could be because the tests are running elsewhere.")))))))))
+
+(defn create-empty-datapack
+  [auth name id]
+  (let [metadata {::ms/id id
+                  ::ms/name name}
+        resp @(http/put (url (str "/api/datapacks/" id "/metadata"))
+                        {:throw-exceptions false
+                         :content-type :json
+                         :as :json
+                         :headers {:authorization (:auth-token auth)}
+                         :form-params metadata})]
+    (when-accepted resp
+      (let [receipt-resp (wait-for-receipt auth resp)]
+        (is (= 200 (:status receipt-resp))
+            "metadata receipt")
+        (= 200 (:status receipt-resp))))))
+
+(defn get-datapack
+  [auth id]
+  (let [resp @(http/get (url (str "/api/datapacks/" id "/metadata"))
+                        {:throw-exceptions false
+                         :content-type :json
+                         :as :json
+                         :headers {:authorization (:auth-token auth)}})]
+    (when-success resp
+      (:body (api/coerce-response resp)))))

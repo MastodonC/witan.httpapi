@@ -12,7 +12,7 @@
                                     (swap! results conj %)) %) schema)
       (is (empty? @results))))
   (testing "paged-metadata-items"
-    (let [schema (swagger/transform ::s/paged-metadata-items)
+    (let [schema (swagger/transform ::s/paged-files)
           results (atom [])]
       (clojure.walk/postwalk #(do (when (= [] (:required %))
                                     (swap! results conj %)) %) schema)
