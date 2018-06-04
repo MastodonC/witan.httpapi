@@ -1,0 +1,250 @@
+* witan.httpapi
+
+**** June 2018
+
+/This document assumes familiarity with the Witan architecture, CQRS and event-sourcing./
+
+*witan.httpapi* (aka 'the API') is the service concerned with providing a JSON REST API so that external developers can use the features of Witan in their
+own projects and models. This is especially relevant to Mastodon C's own modelling team who regularly use the API as part of their process. The aspiration
+is that the API maintains feature parity with the UI although this is currently not the case, and features tend to be added as-and-when there is a request
+for them.
+
+It is a traditional 'microservice' as the term has become recognised inside Mastodon C. It connects to and participates in the wider CQRS/ES system. It's
+a lot smaller and more compact than most services because, for the most part, it's simply an adaptor between REST and CQRS.
+
+The REST API presents as slightly complicated; it was designed to push the handling of async operations on to the client rather than in the API service
+itself. To facilitate this it uses the concept of 'receipts' - certain POST operations will return a Receipt, rather than the result. The client then polls
+this Receipt, receiving a 202 whilst the Receipt is pending. Eventually the API will either return a 200 or a 302 to another resource.
+
+A Swagger document is automatically produced and hosted as part of the service. You can see the production document at:
+
+https://api.witanforcities.com
+
+This address is also the endpoint for API calls.
+
+** History
+
+Initially, having an API was a requirement of the agreed InnovateUK deliverables however a customer expressed an interest in using it and so resources
+were dedicated to it. Due to the design of the cluster, it was near impossible to simply expose the inner services' REST endpoints - authentication,
+tunneling etc. Although it wasn't always the idea to have a service provide that entry point it felt like the most sensible and straightforward solution
+at the time.
+
+** Component Diagrams
+
+*** System Overview
+
+#+BEGIN_SRC plantuml :file docs/components.png :results silent
+package "Witan Cluster" {
+  [kixi.datastore]
+  [kixi.heimdall]
+  [kixi.search]
+  [witan.httpapi] #LightGreen
+}
+
+node "AWS" {
+
+database "kinesis" {
+  [streams]
+}
+database "dynamodb" {
+  [tables]
+}
+
+database "s3" {
+  [file bucket]
+}
+}
+
+User -> [witan.httpapi]
+[witan.httpapi] --> [kixi.datastore]
+[witan.httpapi] --> [kixi.heimdall]
+[witan.httpapi] --> [kixi.search]
+[streams] -> [witan.httpapi] #Blue
+[witan.httpapi] --> [streams] #Green
+[witan.httpapi] --> [tables]
+[witan.httpapi] --> [file bucket]
+#+END_SRC
+
+[[file:docs/components.png]]
+
+The above diagram illustrates the API's dependencies. Very similarly to the Gateway, it queries other services directly but uses Commands and Events to
+make state changes.
+
+*** Application Overview
+
+#+BEGIN_SRC plantuml :file docs/application.png :results silent
+
+  ' node "Witan Cluster" {
+  '   [kixi.datastore] #Orchid
+  ' }
+
+  package "witan.httpapi" {
+    package "components" #LightGreen {
+      [::components/activities]
+      [::components/auth]
+      [::components/database]
+      [::components/requests]
+      [::components/webserver]
+    }
+
+    [::api]
+    [::queries]
+    [::spec]
+    [::system]
+  }
+
+  database "kinesis" {
+    [commands]
+    [events]
+  }
+
+  database "dynamodb" {
+    [tables]
+  }
+
+  ' Connections
+
+[::system] --> [::components/activities]
+[::system] --> [::components/auth]
+[::system] --> [::components/database]
+[::system] --> [::components/requests]
+[::system] --> [::components/webserver]
+
+[::api] <. [::spec] : informs
+[::components/activities] <. [::spec] : informs
+
+[::components/webserver] -> [::api]
+[::api] --> [::queries] #Purple
+[::api] --> [::components/auth] #Purple
+[::api] --> [::components/activities] #Purple
+
+[::queries] -> [::components/requests]
+[::components/activities] --> [::components/database]
+
+[::components/database] -> [tables]
+[events] --> [::components/activities] #Blue
+[::components/activities] --> [commands] #Green
+
+  ' Hidden Connections
+
+#+END_SRC
+
+[[file:docs/application.png]]
+
+The above diagram shows a more detailed layout of the API's internal application design.
+
+** Component Summary
+
+This section aims to address each of the high-level components currently being used by Collect. As well as the usual System component, there are two
+aggregates - [Collection] Request and Campaign - and one process manager, /also called/ Collection Request. At a glance the naming convention looks confusing but once
+namespaces are applied it's much easier to grok.
+
+Before talking about the specific aggregates, it's worth talking about the design pattern that they both follow. Attempts were made to abstract, as much
+as possible, the actions of an aggregate, in order that we might provide a common interface. Perhaps predictably, this resulted in just two methods: ~get~ and
+~put!~. Effort was also made to ensure that aggregate processing could stand up to 'the reduce test' which is essentially a test to imagine whether the
+interface for the aggregate would cope if the event stream that it consumes was replaced with a reduce function (this is a core desire of event sourcing).
+Therefore ~get~ and ~put!~ represent actions every aggregate would have to do inside a ~reduce~ loop in order to safely apply each event.
+
+~kixi.collect.aggregate~ has provided an interface and helper functions to ensure implementing aggregates make use of this style. Specifically, the
+function ~aggregate-event-handler-inner~ demonstrates how aggregates are used as an event comes into the system.
+
+*** System
+
+| Key Namespaces        | Desciption                                                         |
+|-----------------------+--------------------------------------------------------------------|
+| witan.httpapi.api     | Defines the routes for the API and combines with specs for Swagger |
+| witan.httpapi.spec    | Defines specs for return and result types                          |
+| witan.httpapi.system  | Entry point and builds the Component system                        |
+
+The System component describes all the parts of the API essential to getting it up and running.
+As with all the Witan microservices, it uses [[https://github.com/stuartsierra/component][Stuart sierra's Component library]] to manage the start-up of service components and [[https://github.com/juxt/aero][Juxt's Aero]] to provide
+parameterised and environment-aware configuration.
+
+*** Requests & Responses
+
+| Key Namespaces                      | Desciption                                                           |
+|-------------------------------------+----------------------------------------------------------------------|
+| witan.httpapi.queries               | Provides functions for querying other Witan services (datastore etc) |
+| witan.httpapi.components.activities | Event handlers and Receipt logic                                     |
+| witan.httpapi.components.requests   | Provides an HTTP client                                              |
+
+All requests coming into the API are routed through ~witan.httpapi.api~ into either ~witan.httpapi.queries~ or ~witan.httpapi.components.activities~. The
+two components then act very differently; Queries are exclusively GET operations - they forward the calls through to one of the other services and
+synchronously return the results. Activities are more complex, involve asynchronous 'Receipts' and use persisted state so that they can handle horizontal
+scale.
+
+In the case of Activities, consider the operation of creating a new metadata. The API route is ~PUT /files/<id>/metadata~.
+  1. A UUID is created for the purposes of pairing a Receipt to a Command.
+  2. The correct command payload is created: ~:kixi.datastore.filestore/create-file-metadata~; the new UUID is specified as the 'Command ID'
+  3. A Receipt is created with the same newly created UUID.
+  4. The command is sent.
+  5. The client is returned a status code 202 and the newly created UUID.
+
+At this point the client will poll the Receipt on a different URL: ~GET /receipts/<id>~. It will continue to return 202 for the time being.
+~witan.httpapi.components.activities~ has set up event handlers for the event which will indicate that the metadata creation was successful:
+~:kixi.datastore.file/created~.
+  1. The event is received and validated.
+  2. The 'Command ID', which accompanies all Events, is extracted and used to look up the Receipt.
+  3. The 'Receipt' is marked as complete and given a forward location.
+  4. Client polling the Receipt is now redirected to ~GET /files/<id>/metadata~.
+
+~witan.httpapi.components.activities~ can handle events and commands from either style.
+
+*** Migrations
+
+Components are usually encouraged to manage database migrations themselves although in this project migrations are handled at the application level, but
+performed by ~witan.httpapi.database~.
+
+*** Testing
+
+There are instructions for how to perform testing in the README. Auth details are provided by staging Heimdall and so *the tests will only pass when there
+is a working staging environment from which to log in*.
+
+Beside that dependency ~witan.httpapi~ has an even balance of unit and integration tests although they aren't organised well; unit tests are littered about
+whereas the bulk of the integration tests are in ~witan.httpapi.api-test~.
+
+*** Honourable Mentions
+
+**** kixi.spec
+
+This project was the ground-breaker for ~kixi.spec~ and a lot of work was done to maintain the specs so that they operated both inside and on the edge of the
+application suite. ~kixi.spec~ is almost entirely just a library of specs from across the suite, but it's a good idea to be familiar with it - new projects
+should definitely aspire to use it and contribute to it. Old projects should aim to migrate at some point.
+
+**** aleph
+
+It looks as though we're using our own fork of Zach Tellman's ~aleph~. It's unclear why this is. *Look at upgrading this*.
+
+**** buddy
+
+We're also using our own fork of ~buddy~ to work around an out of date dependency. This has since been fixed and we should no longer be using our own fork.
+*This should be upgraded*.
+
+**** joplin
+
+~kixi.collect~ still uses a Mastodon C branch of ~joplin~ because, as far as I can tell, although a pull request was merged, a new version hasn't yet
+been released: https://github.com/juxt/joplin/pull/99.
+
+** Future
+
+*** Adding new features
+
+It's very likely that new features will need to be added to ~witan.httpapi~ at some point, as it will need to catch up to the UI. Adding features is
+relatively straightforward now because the Receipt handling is all in place and there are a multitude of examples you can use.
+
+In these pull requests, functionality for Datapacks was added:
+
+https://github.com/MastodonC/witan.httpapi/pull/36/files?w=1
+https://github.com/MastodonC/witan.httpapi/pull/37/files?w=1
+https://github.com/MastodonC/witan.httpapi/pull/38/files?w=1
+
+- Identify the routes that need adding.
+- If a query, add the appropriate query function.
+- If commands and events, add handlers for the appropriate event, add relevant specs - send command, wait for response, complete the receipt.
+- *Always add tests*
+
+*** Long-term plan
+
+To my knowledge, the long-term plan for the API is to continue adding features so that it catches up with UI. With other features on the horizon, such as
+Collect+Share and Schema checking, there's unlikely to be a shortage of things to do. Care should be taken when adding these features at the UI level so as
+to avoid encoding any business logic. The API should remain free of business logic.
