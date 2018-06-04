@@ -135,18 +135,17 @@ The above diagram shows a more detailed layout of the API's internal application
 
 ** Component Summary
 
-This section aims to address each of the high-level components currently being used by Collect. As well as the usual System component, there are two
-aggregates - [Collection] Request and Campaign - and one process manager, /also called/ Collection Request. At a glance the naming convention looks confusing but once
-namespaces are applied it's much easier to grok.
+This section aims to address each of the high-level components currently being used by the API. As stated previously, this application is smaller than
+most as it's not more than just an adaptor for translating the CQRS system into sensible REST calls. Therefore, the only two component areas are System
+and 'Requests & Responses' which covers both queries and 'activities'.
 
-Before talking about the specific aggregates, it's worth talking about the design pattern that they both follow. Attempts were made to abstract, as much
-as possible, the actions of an aggregate, in order that we might provide a common interface. Perhaps predictably, this resulted in just two methods: ~get~ and
-~put!~. Effort was also made to ensure that aggregate processing could stand up to 'the reduce test' which is essentially a test to imagine whether the
-interface for the aggregate would cope if the event stream that it consumes was replaced with a reduce function (this is a core desire of event sourcing).
-Therefore ~get~ and ~put!~ represent actions every aggregate would have to do inside a ~reduce~ loop in order to safely apply each event.
+The only state in the system are the Receipts. This provides a means to scale horizontally: due to the asynchronous nature of Receipts, the instance
+that issues a Receipt doesn't need to be the one to update it with the result, and 'results' are always just redirects to the location of the resource that
+is being dealt with. (See 'Requests & Responses' for an example). This is in contrast to the Gateway, which insists that instances receive all events so
+that they can deliver the result to the requester.
 
-~kixi.collect.aggregate~ has provided an interface and helper functions to ensure implementing aggregates make use of this style. Specifically, the
-function ~aggregate-event-handler-inner~ demonstrates how aggregates are used as an event comes into the system.
+All of the Receipt handling is done in ~witan.httpapi.components.activities~ which is a bad name and potentially, this namespace could do with being split
+into smaller parts.
 
 *** System
 
