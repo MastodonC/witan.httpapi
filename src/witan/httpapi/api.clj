@@ -349,10 +349,10 @@
                                id
                                operation
                                activity
-                               group-id)]
-            (if (success? s)
-              (success ACCEPTED r headers)
-              (fail s))))))))
+                               group-id)
+                (if (success? s)
+                  (success ACCEPTED r headers)
+                  (fail s))]))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
